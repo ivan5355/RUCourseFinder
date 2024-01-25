@@ -56,7 +56,7 @@
                 event.preventDefault();
                 clearSearch();
                 search();
-
+``          }
         });
 
         function clearSearch() {
@@ -87,12 +87,11 @@
                         var titleElement = document.createElement('p');
                         titleElement.textContent = course.title;
                         coursesContainer.appendChild(titleElement);
-
                     });
                 }else{
                     var messageElement = document.createElement('p');
                     messageElement.textContent = data.message || 'No search results found.';
-                    titlesContainer.appendChild(messageElement);
+                    coursesContainer.appendChild(messageElement);
                 }
             });
         }

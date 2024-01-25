@@ -8,9 +8,11 @@ app = Flask(__name__, template_folder='templates')
 with open('rutgers_courses.json', 'r') as json_file:
     courses_data = json.load(json_file)
 
+
 @app.route('/')
 def search_page():
     return render_template('main.html')
+
 
 @app.route('/search', methods=['POST'])
 def search():
@@ -36,9 +38,8 @@ def search():
                 section_number = section.get('section_number')
                 instructor_for_section = section.get('instructors', [])
 
-                if instructor_for_section not in  instructors_for_course:
+                if instructor_for_section not in instructors_for_course:
                     instructors_for_course.append(instructor_for_section)
-
 
             results.append({
                 'instructors': instructors_for_course,
@@ -52,6 +53,7 @@ def search():
 
     pprint(response_data)
     return jsonify(response_data)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
