@@ -56,7 +56,7 @@
                 event.preventDefault();
                 clearSearch();
                 search();
-            }
+
         });
 
         function clearSearch() {
@@ -77,16 +77,17 @@
             })
             .then(response => response.json())
             .then(data => {
-                var titles = data.titles || [];
+                var courses = data.courses || [];
 
-                var titlesContainer = document.getElementById('search-results');
-                titlesContainer.inner = '';
+                var coursesContainer = document.getElementById('search-results');
+                coursesContainer.innerHTML = '';
 
-                if(titles.length>0){
-                    titles.forEach(function(title){
+                if(courses.length>0){
+                    courses.forEach(function(course){
                         var titleElement = document.createElement('p');
-                        titleElement.textContent = title;
-                        titlesContainer.appendChild(titleElement);
+                        titleElement.textContent = course.title;
+                        coursesContainer.appendChild(titleElement);
+
                     });
                 }else{
                     var messageElement = document.createElement('p');
