@@ -87,6 +87,26 @@
                         var titleElement = document.createElement('p');
                         titleElement.textContent = course.title;
                         coursesContainer.appendChild(titleElement);
+
+                        if (course.instructors.length > 0) {
+                            var professorsElement = document.createElement('p');
+                            professorsElement.textContent = 'Professors: ';
+
+                            for (var i = 0; i < course.instructors.length; i++) {
+                                var professor = course.instructors[i][0];
+                                professorsElement.textContent += professor.name;
+
+                                if (i < course.instructors.length - 1) {
+                                    professorsElement.textContent += ', ';
+                                }
+                            }
+
+                             coursesContainer.appendChild(professorsElement);
+                         }
+
+                        var separatorElement = document.createElement('hr');
+                        coursesContainer.appendChild(separatorElement);
+
                     });
                 }else{
                     var messageElement = document.createElement('p');
