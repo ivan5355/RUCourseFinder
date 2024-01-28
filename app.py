@@ -26,10 +26,15 @@ def search():
     data = request.json
     search_term = data.get('searchTerm')
 
+    close_matches = difflib.get_close_matches(search_term.lower(),
+                                              [course.get('title', '').lower() for course in courses_data], n=3)
+
     matching_courses = []
-    for course in courses_data:
-        if search_term.lower() in course.get('title', '').lower(): #difflib.findclosestmathc
-            matching_courses.append(course)
+    for match in close_matches:
+        for course in courses_data:
+            if match == course.get('title', '').lower() or search_term.lower() in course.get('title', '').lower():
+                matching_courses.append(course)
+                break
 
     if not matching_courses:
         return jsonify({'searchTerm': search_term, 'message': 'No search results found.'})
