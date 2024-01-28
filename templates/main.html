@@ -104,6 +104,10 @@
                              coursesContainer.appendChild(professorsElement);
                          }
 
+                        var descriptionElement = document.createElement('p');
+                        descriptionElement.textContent = course.gptgenerated;
+                        coursesContainer.appendChild(descriptionElement);
+
                         var separatorElement = document.createElement('hr');
                         coursesContainer.appendChild(separatorElement);
 
@@ -115,15 +119,6 @@
                 }
             });
         }
-
-
-
-
-
-
-
-
-
 
     </script>
 </body>
