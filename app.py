@@ -10,16 +10,24 @@ app = Flask(__name__, template_folder='templates')
 with open('rutgers_courses.json', 'r') as json_file:
     courses_data = json.load(json_file)
 
-
-
 with open('config.json', 'r') as config_file:
     config = json.load(config_file)
 
+courses_by_title = {}
+for course in courses_data:
+    title = course.get('title').lower()
+    courses_by_title[title] = course
+
+
+
 os.environ["OPENAI_API_KEY"] = config.get("OPENAI_API_KEY")
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+
 @app.route('/')
 def search_page():
     return render_template('main.html')
+
 
 @app.route('/search', methods=['POST'])
 def search():
@@ -27,14 +35,15 @@ def search():
     search_term = data.get('searchTerm')
 
     close_matches = difflib.get_close_matches(search_term.lower(),
-                                              [course.get('title', '').lower() for course in courses_data], n=3)
+                                              courses_by_title.keys(), n=5) #finds closest matches in coursetitle:courseobject dictionart
 
     matching_courses = []
+
+    #loops through mactches  and check if the courses by_tit
     for match in close_matches:
-        for course in courses_data:
-            if match == course.get('title', '').lower() or search_term.lower() in course.get('title', '').lower():
-                matching_courses.append(course)
-                break
+        matching_course = courses_by_title.get(match)
+        if matching_course:
+            matching_courses.append(matching_course) #adds object to list that have a matching title
 
     if not matching_courses:
         return jsonify({'searchTerm': search_term, 'message': 'No search results found.'})
