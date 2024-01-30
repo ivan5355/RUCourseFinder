@@ -56,7 +56,6 @@ def search():
         instructors_for_course = []
 
         for section in sections:
-            section_number = section.get('section_number')
             instructor_for_section = section.get('instructors', [])
 
             if instructor_for_section not in instructors_for_course:
