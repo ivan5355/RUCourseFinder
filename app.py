@@ -7,6 +7,7 @@ from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__, template_folder='templates')
 
+
 with open('rutgers_courses.json', 'r') as json_file:
     courses_data = json.load(json_file)
 
@@ -17,7 +18,6 @@ courses_by_title = {}
 for course in courses_data:
     title = course.get('title').lower()
     courses_by_title[title] = course
-
 
 
 os.environ["OPENAI_API_KEY"] = config.get("OPENAI_API_KEY")
@@ -50,6 +50,7 @@ def search():
 
     results = []
     for course in matching_courses:
+        course_string = course.get("courseString")
         course_title = course.get('title')
         sections = course.get('sections', [])
 
@@ -77,6 +78,7 @@ def search():
             'gptgenerated': chatgptdescription,
             'instructors': instructors_for_course,
             'title': course_title,
+            'course_number': course_string,
         })
 
     response_data = {'searchTerm': search_term,

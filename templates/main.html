@@ -85,7 +85,7 @@
                 if(courses.length>0){
                     courses.forEach(function(course){
                         var titleElement = document.createElement('p');
-                        titleElement.textContent = course.title;
+                        titleElement.textContent = course.course_number + " " + course.title;
                         coursesContainer.appendChild(titleElement);
 
                         if (course.instructors.length > 0) {
