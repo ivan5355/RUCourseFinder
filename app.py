@@ -13,9 +13,11 @@ with open('rutgers_courses.json', 'r') as json_file:
 with open('config.json', 'r') as config_file:
     config = json.load(config_file)
 
-#maps the titles of courses to object
 courses_by_title = {}
+
+#maps the titles of courses to object
 for course in courses_data:
+
     title = course.get('title').lower()
     courses_by_title[title] = course
 
@@ -40,21 +42,20 @@ def generate_course_description(course_title):
     )
 
     return chat_completion.choices[0].message.content
-
-
 @app.route('/search', methods=['POST'])
 def search():
+
     data = request.json
     search_term = data.get('searchTerm')
 
-    close_matches = difflib.get_close_matches(search_term.lower(),
-                                              courses_by_title.keys(),
-                                              n=5)
+    # finds the 5 closest matches based on the course_titles
+    close_matches = difflib.get_close_matches(search_term.lower(), courses_by_title.keys(), n=5)
 
     matching_courses = []
 
     # loops through matches and adds object to matching_course that have a matching title
     for match in close_matches:
+
         matching_course = courses_by_title.get(match)
         matching_courses.append(matching_course)
 
@@ -74,6 +75,7 @@ def search():
 
         #loops through each section to extract the instructors
         for section in sections:
+
             instructor_for_section = section.get('instructors', [])
 
             if instructor_for_section not in instructors_for_course:
@@ -94,8 +96,8 @@ def search():
 
     pprint(response_data)
     print(response_data['courses'][0]['gptgenerated'])
-    return jsonify(response_data)
 
+    return jsonify(response_data)
 
 if __name__ == '__main__':
     app.run(debug=True)
