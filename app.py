@@ -1,3 +1,4 @@
+import code
 import json
 import difflib
 import os
@@ -21,11 +22,17 @@ with open('config.json', 'r') as config_file:
 
 courses_by_title = {}
 
-#maps the titles of courses to object
+#maps the titles of courses to their course objects
 for course in courses_data:
-
     title = course.get('title').lower()
     courses_by_title[title] = course
+
+#maps the course codes of courses to their course objects; just in case for future use
+courses_by_code = {}
+for course in courses_data:
+    course_code = course.get("courseString")
+    code_without_colons = course_code.replace(":", "")
+    courses_by_code[code_without_colons] = course
 
 os.environ["OPENAI_API_KEY"] = config.get("OPENAI_API_KEY")
 openai_client = openai.AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
