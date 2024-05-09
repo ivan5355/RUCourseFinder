@@ -1,2 +1,7 @@
 config.json
-myenv
+scrape_course_equivalencies.py
+venv/
+.idea/
+__pycache__/
+
+
