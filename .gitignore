@@ -1,5 +1,4 @@
 config.json
-scrape_course_equivalencies.py
 venv/
 .idea/
 __pycache__/
