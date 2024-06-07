@@ -1,87 +1,92 @@
-import pprint
-from bs4 import BeautifulSoup
-import requests
+import os
 import time
+from bs4 import BeautifulSoup
 import pandas as pd
-import json
+from selenium.webdriver.support.ui import Select
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
-with open('config.json', 'r') as f:
-    config = json.load(f)
-art_id = config['ArtId']
 
-data = {'doSearch': "Search"}
-cookies = {'ArtId': art_id}
-user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.1'
-headers = {
-    'User-Agent': user_agent,
-    'Cache-Control': 'no-cache, no-store, must-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0'
-}
+# Initialize the browser
+driver = webdriver.Chrome()
 
-community_colleges = {
-    "AT": "Atlantic-Cape Community College",
-    "BE": "Bergen Community College",
-    "BR": "Brookdale Community College",
-    "CA": "Camden County College",
-    "MR": "County College of Morris",
-    "EX": "Essex County College",
-    "HD": "Hudson County Community College",
-    "ME": "Mercer County Community College",
-    "MI": "Middlesex College",
-    "OC": "Ocean County College",
-    "PA": "Passaic County Community College",
-    "RV": "Raritan Valley Community College",
-    "BU": "Rowan College at Burlington County",
-    "CU": "Rowan College of South Jersey - Cumberland Campus",
-    "GL": "Rowan College of South Jersey - Gloucester Campus",
-    "SA": "Salem Community College",
-    "SX": "Sussex County Community College",
-    "UI": "UCNJ Union College of Union County, NJ",
-    "WA": "Warren County Community College"
-}
+community_colleges = ["Atlantic-Cape Community College", 'Bergen Community College', 'Brookdale Community College', 'Camden County College', 'County College of Morris', 'Essex County College', 'Hudson County Community College', 'Mercer County Community College', 'Middlesex College', 'Ocean County College', 'Passaic County Community College', 'Raritan Valley Community College', 'Rowan College at Burlington County', 'Rowan College of South Jersey - Cumberland Campus', 'Rowan College of South Jersey - Gloucester Campus', 'Salem Community College', 'Sussex County Community College', 'UCNJ Union College of Union County, NJ', 'Warren County Community College']
+                      
+colleges = ["Rutgers Business School - New Brunswick", "Rutgers-Edward Bloustein Sch of Planning & Policy", "Rutgers-Ernest Mario School of Pharmacy", "Rutgers-Mason Gross School of Arts", "Rutgers-School of Arts and Sciences", "Rutgers-School of Engineering", "Rutgers-School of Env Biological Sciences", "Rutgers-School of Management and Labor Relations", "Rutgers-School of Nursing"]
 
-colleges = {
-    "BB": "Rutgers Business School - New Brunswick",
-    "BP": "Rutgers-Edward Bloustein Sch of Planning & Policy",
-    "PH": "Rutgers-Ernest Mario School of Pharmacy",
-    "MG": "Rutgers-Mason Gross School of Arts",
-    "AS": "Rutgers-School of Arts and Sciences",
-    "EN": "Rutgers-School of Engineering",
-    "CK": "Rutgers-School of Env Biological Sciences",
-    "ML": "Rutgers-School of Management and Labor Relations",
-    "NR": "Rutgers-School of Nursing"
-}
 
-def get_classes(src, dest):
-    unique_identifier = int(time.time())  # Unique timestamp
-    query = f'{src}+{dest}&ts={unique_identifier}'  # Append to make request unique
-    url = f'https://njtransfer.org/artweb/listeqs.cgi?{query}'
-    r = requests.post(url, data=data, headers=headers, cookies=cookies)
-    if r.status_code != 200:
-        return None
 
-    soup = BeautifulSoup(r.text, 'lxml')
+driver = webdriver.Chrome()
+
+def get_classes(community_college, college):
+    
+    driver.get('https://njtransfer.org/artweb/chgri.cgi')
+
+    community_colleges = Select(driver.find_element(By.NAME, "SIInst"))
+    community_colleges.select_by_visible_text(community_college)
+
+    colleges = Select(driver.find_element(By.NAME, "RIInst"))
+    colleges.select_by_visible_text(college)
+
+    try:
+      cookies_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, "acceptcookies")))
+      cookies_button.click()
+    except:
+      pass
+
+    submit_button = driver.find_element(By.NAME, "SubChgRI")
+    submit_button.click()
+
+    list_all = driver.find_element(By.CLASS_NAME, "btn.btn-round.btn-warning.btn-sm.shadow-none")
+    list_all.click()
+
+    search_button = driver.find_element(By.NAME, "doSearch")
+    search_button.click()
+
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
     rows = soup.find_all('tr')[2:]
+
     courses = []
     for course in rows:
         tds = course.find_all('td')
         courses.append({
+            'community_college': community_college,
+            'college': college,
             'code': tds[0].a.text,
             'name': tds[2].text,
             'credits': tds[3].text,
             'equivalency': tds[5].text,
             'transfer_credit': tds[7].text
         })
+
     return courses
 
-for cc_code, cc_name in community_colleges.items():
-    for c_code, c_name in colleges.items():
-        courses = get_classes(cc_code, c_code)
+
+
+all_courses = []
+
+for community_college in community_colleges:
+    for college in colleges:
+        courses = get_classes(community_college, college)
         if courses:
-            df = pd.DataFrame(courses)
-            filename = f"{cc_name}_{c_name}.csv"
-            df.to_csv(filename, index=False)
-            print(f"Data saved to {filename}")
+            all_courses.extend(courses)
+            print(f"Got {len(courses)} courses for {community_college} and {college}")
         else:
-            print(f"No data found for {cc_name} and {c_name}")
+            print(f"Error getting courses for {community_college} and {college}")
+
+df = pd.DataFrame(all_courses)
+df.to_csv('community_to_college.csv', index=False)
+
+driver.quit()
+
+
+
+
+
+
+
+
+
