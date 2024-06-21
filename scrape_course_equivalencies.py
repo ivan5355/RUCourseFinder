@@ -17,8 +17,6 @@ community_colleges = ["Atlantic-Cape Community College", 'Bergen Community Colle
                       
 colleges = ["Rutgers Business School - New Brunswick", "Rutgers-Edward Bloustein Sch of Planning & Policy", "Rutgers-Ernest Mario School of Pharmacy", "Rutgers-Mason Gross School of Arts", "Rutgers-School of Arts and Sciences", "Rutgers-School of Engineering", "Rutgers-School of Env Biological Sciences", "Rutgers-School of Management and Labor Relations", "Rutgers-School of Nursing"]
 
-
-
 driver = webdriver.Chrome()
 
 def get_classes(community_college, college):
@@ -81,12 +79,5 @@ df = pd.DataFrame(all_courses)
 df.to_csv('community_to_college.csv', index=False)
 
 driver.quit()
-
-
-
-
-
-
-
 
 

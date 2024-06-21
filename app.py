@@ -2,19 +2,16 @@ import json
 import difflib
 import os
 from typing import OrderedDict
-from flask import Flask, g, render_template, request, jsonify
+from quart import Quart, render_template, request, jsonify
 import asyncio
-from pprint import pprint
 import time
 import aiohttp
-import openai
 import pandas as pd
-import requests
-from datetime import datetime
 import googlemaps as gmaps
+from datetime import datetime
+from openai import AsyncOpenAI
 
-
-app = Flask(__name__, template_folder='templates')
+app = Quart(__name__, template_folder='templates')
 
 with open('rutgers_courses.json', 'r') as json_file:
     courses_data = json.load(json_file)
@@ -24,7 +21,10 @@ with open('config.json', 'r') as config_file:
 
 courses_by_title = {}
 
+course_cache = {}
+
 your_location = None
+
 
 community_colleges = {
     "Rowan College of South Jersey - Cumberland Campus": (39.4794, -75.0289),
@@ -49,71 +49,79 @@ community_colleges = {
     "Warren County Community College": (40.7594, -75.0089)
 }
 
-#maps the titles of courses to object
+# Maps the titles of courses to objects
 for course in courses_data:
     title = course.get('title').lower()
     courses_by_title[title] = course
 
-#maps the course code to object
+# Maps the course code to objects
 courses_by_code = {}
 for course in courses_data:
     course_code = course.get('courseString').replace(':', '')
     courses_by_code[course_code] = course
 
-
 os.environ["OPENAI_API_KEY"] = config.get("OPENAI_API_KEY")
-openai_client = openai.AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 os.environ["GOOGLE_MAPS_API_KEY"] = config.get("GOOGLE_MAPS_API_KEY")
-gmaps = gmaps.Client(key=os.environ.get("GOOGLE_MAPS_API_KEY"))
-
+gmaps_client = gmaps.Client(key=os.environ.get("GOOGLE_MAPS_API_KEY"))
 
 @app.route('/')
-def search_page():
-    return render_template('main.html')
+async def search_page():
+    return await render_template('main.html')
 
-#generates course description by calling chat-gpt api
 async def get_tasks(course_titles, session):
     tasks = []
-
     for title in course_titles:
+        if title.lower() in course_cache:
+            continue  # Skip cached courses
         prompt = f"Tell me about the course {title} in 100 words. Make the description as descriptive as possible"
-
-        async with session:
-            task_coroutine = openai_client.chat.completions.create(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    }
-                ],
-                model="gpt-3.5-turbo",
-            )
-            tasks.append(task_coroutine)
+        task_coroutine = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        tasks.append((title, task_coroutine))
+        print(f"Added task for {title}")
     return tasks
-
 
 async def get_course_descriptions(course_titles):
     start = time.time()
     async with aiohttp.ClientSession() as session:
         tasks = await get_tasks(course_titles, session)
-        responses = await asyncio.gather(*tasks)
-
+        
         course_descriptions = {}  # Dictionary to store course descriptions
 
-        for course_title, response in zip(course_titles, responses):
-            result_text = response.choices[0].message.content
-            course_descriptions[course_title] = result_text
+        # First, add all cached descriptions
+        for course_title in course_titles:
+            if course_title.lower() in course_cache:
+                course_descriptions[course_title] = course_cache[course_title.lower()]
 
+        # Gather all non-cached tasks
+        non_cached_tasks = [task for title, task in tasks if title.lower() not in course_cache]
+        responses = await asyncio.gather(*non_cached_tasks)
+
+        # Process responses and update cache
+        for (title, _), response in zip(tasks, responses):
+            if title.lower() not in course_cache:
+                result_text = response.choices[0].message.content
+                course_descriptions[title] = result_text
+                course_cache[title.lower()] = result_text
+                print(f"Finished task for course: {title}")
+
+    write_cache_to_file(course_cache, 'course_cache.json')
     end = time.time()
     print(end - start)
 
     return course_descriptions
 
+def write_cache_to_file(cache, filename):
+    with open(filename, 'w') as json_file:
+        json.dump(cache, json_file, indent=4)
+
 
 @app.route('/save_location', methods=['POST'])
-def save_location():
-    data = request.json
+async def save_location():
+    data = await request.json
     latitude = data.get('latitude')
     longitude = data.get('longitude')
     global your_location
@@ -127,17 +135,14 @@ def save_location():
     return jsonify({'status': 'success', 'latitude': latitude, 'longitude': longitude})
 
 
-
 def get_distance(your_location, community_college_location):
-
     if your_location is None or community_college_location is None:
         return float('inf')
     
-    directions = gmaps.directions(your_location, community_college_location, mode="driving", departure_time=datetime.now())
+    directions = gmaps_client.directions(your_location, community_college_location, mode="driving", departure_time=datetime.now())
     distance_in_meters = directions[0]['legs'][0]['distance']['value']
     distance_in_miles = distance_in_meters * 0.000621371
     return distance_in_miles
-
 
 def get_top_5_course_equivalencies_by_distance(course_code):
     equivalencies = pd.read_csv('community_to_college.csv')
@@ -146,144 +151,109 @@ def get_top_5_course_equivalencies_by_distance(course_code):
     equivalencies['Distance'] = equivalencies['Distance'].apply(lambda x: f'{x:.2f} miles')
     top_5 = equivalencies.sort_values('Distance').head(5)
     return top_5
- 
-
 
 @app.route('/search_by_title', methods=['POST'])
-def search_by_title():
-
-    data = request.json
+async def search():
+    data = await request.json
     search_term = data.get('searchTerm')
-
-    # finds the 5 closest matches based on the course_titles
+    # Finds the 5 closest matches based on the course_titles
     close_matches = difflib.get_close_matches(search_term.lower(), courses_by_title.keys(), n=10)
-
     matching_courses = []
     course_titles = []
-
-    # loops through matches and adds object to matching_course that have a matching title
+    # Loops through matches and adds objects to matching_course that have a matching title
     for match in close_matches:
-
         matching_course = courses_by_title.get(match)
         matching_courses.append(matching_course)
         course_titles.append(match)
-
     if not matching_courses:
         return jsonify({'searchTerm': search_term, 'message': 'No search results found.'})
-
+    
     results = []
-
-    course_descriptions = asyncio.run(get_course_descriptions(course_titles))
-
-    #loops through matching_courses to extract the coursecode, coursetitle, and instructors
+    course_descriptions = await get_course_descriptions(course_titles)
+    # Loops through matching_courses to extract the course code, course title, and instructors
     for course in matching_courses:
-
         course_string = course.get("courseString")
         course_title = course.get('title')
-
         sections = course.get('sections', [])
-
         instructors_for_course = []
-
-        #loops through each section to extract the instructors
+        # Loops through each section to extract the instructors
         for section in sections:
-
             instructor_for_section = section.get('instructors', [])
-
             if instructor_for_section not in instructors_for_course:
                 instructors_for_course.append(instructor_for_section)
 
-
-        chatgpt_description = get_course_descriptions(course_title)
+        chatgpt_description = course_descriptions.get(course_title.lower())
+        print(course['title'], instructors_for_course)
 
         course_code = course_string.replace(':', '')
-        course_equivalencies = get_top_5_course_equivalencies_by_distance(course_code)
-        course_equivalencies = course_equivalencies.to_dict(orient='records')
-        print(course_equivalencies)
-
-        if not course_equivalencies:
-            course_equivalencies = "No equivalencies found."
-     
-
-        results.append(OrderedDict([
-            ('title', course_title),
-            ('course_number', course_string),
-            ('instructors', instructors_for_course),
-            ('gpt_description', chatgpt_description),
-            ('equivalencies', course_equivalencies),   
-        ]))
-
-    response_data = {'searchTerm': search_term,
-                     'courses': results
-                     }
-
+        # course_equivalencies = get_top_5_course_equivalencies_by_distance(course_code)
+        # print(course_equivalencies)
+        # course_equivalencies = course_equivalencies.to_dict(orient='records')
+        
+        results.append({
+            'gpt_description': chatgpt_description,
+            'instructors': instructors_for_course,
+            'title': course_title,
+            # 'equivalencies': course_equivalencies,
+            'course_number': course_string
+        })
+    response_data = {
+        'searchTerm': search_term,
+        'courses': results
+    }
     return jsonify(response_data)
 
-
-def get_course_description(course_title):
-    chat_completion = openai.chat.completions.create(
-    messages=[
-        {
-            "role": "user",
-            "content": "Tell me about the course " + course_title + " in 100 words. Make the description as descriptive as possible",
-        }
-    ],
-    model="gpt-3.5-turbo",
-    )
-    return chat_completion.choices[0].message.content
-
-
+async def get_course_description(course_title):
+        prompt = f"Tell me about the course {title} in 100 words. Make the description as descriptive as possible"
+        description = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return description.choices[0].message.content
 
 @app.route('/search_by_code', methods=['POST'])
-def get_course_by_code():
-       
-       data = request.json
-       search_term = data.get('searchTerm')
+async def get_course_by_code():
+    data = await request.json
+    search_term = data.get('searchTerm')
 
-       course = courses_by_code.get(search_term)
-       if course is None:
-            return jsonify({'error': 'Course not found'}), 404
-       
-       course_string = course.get("courseString")
-       course_title = course.get('title')
-       sections = course.get('sections', [])
-       chatgpt_description = get_course_description(course_title)
-       instructors_for_course = []
-
-        #loops through each section to extract the instructors
-       for section in sections:
-
-          instructor_for_section = section.get('instructors', [])
-
-          if instructor_for_section not in instructors_for_course:
-             instructors_for_course.append(instructor_for_section)
-
-       results = []
-
-
-       course_code = course_string.replace(':', '')
-       course_equivalencies = get_top_5_course_equivalencies_by_distance(course_code)
-       course_equivalencies = course_equivalencies.to_dict(orient='records')
-       
-       results.append(OrderedDict([
-            ('title', course_title),
-            ('course_number', course_string),
-            ('instructors', instructors_for_course),
-            ('gpt_description', chatgpt_description),
-            ('equivalencies', course_equivalencies),   
-        ]))
-       
-
-       response_data = {'searchTerm': course_code,
-                       'courses': results
-                       }
-
-       return jsonify(response_data)
-
-
-#print(get_course_by_code('01640152'))
+    course = courses_by_code.get(search_term)
+    if course is None:
+        return jsonify({'error': 'Course not found'}), 404
     
+    course_string = course.get("courseString")
+    course_title = course.get('title')
+    sections = course.get('sections', [])
+    chatgpt_description = await get_course_description(course_title)
+    instructors_for_course = []
+
+    # Loops through each section to extract the instructors
+    for section in sections:
+        instructor_for_section = section.get('instructors', [])
+        if instructor_for_section not in instructors_for_course:
+            instructors_for_course.append(instructor_for_section)
     
+    print(instructors_for_course)
+
+    results = []
+
+    course_code = course_string.replace(':', '')
+    # course_equivalencies = get_top_5_course_equivalencies_by_distance(course_code)
+    # course_equivalencies = course_equivalencies.to_dict(orient='records')
+    # print(course_equivalencies)
+    
+    results.append(OrderedDict([
+        ('title', course_title),
+        ('course_number', course_string),
+        ('instructors', instructors_for_course),
+        ('gpt_description', chatgpt_description)  
+    ]))
+    
+    response_data = {
+        'searchTerm': course_code,
+        'courses': results
+    }
+
+    return jsonify(response_data)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -36,7 +36,7 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             background-color: #f9f9f9;
-            text-align:left;
+            text-align: left;
         }
 
     </style>
@@ -46,16 +46,14 @@
     <form id="search-form">
         <input type="text" id="search-bar" placeholder="Enter your search">
     </form>
-    <div id="search-results">
-
-    </div>
-
+    <div id="search-results"></div>
 
     <script>
-          window.onload = function() {
+        window.onload = function() {
             getLocation();
         };
 
+        // Get user's location
         function getLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(sendPosition, showError);
@@ -64,6 +62,7 @@
             }
         }
 
+        // Send user's location to the server
         function sendPosition(position) {
             var latitude = position.coords.latitude;
             var longitude = position.coords.longitude;
@@ -104,29 +103,26 @@
             }
         }
         
-        document.getElementById('search-bar').addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                clearSearch();
-                search();
-``          }
+        document.getElementById('search-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            clearSearch();
+            search();
         });
 
         function clearSearch() {
-            document.getElementById('search-results').value = '';
-            var titlesContainer = document.getElementById('search-results');
-            titlesContainer.innerHTML = '';
-       }
+            var resultsContainer = document.getElementById('search-results');
+            resultsContainer.innerHTML = '';
+        }
 
-        function search(){
+        function search() {
             var searchTerm = document.getElementById('search-bar').value;
 
-            fetch('/search', {
+            fetch('/search_by_title', {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({searchTerm: searchTerm}),
+                body: JSON.stringify({ searchTerm: searchTerm }),
             })
             .then(response => response.json())
             .then(data => {
@@ -135,8 +131,8 @@
                 var coursesContainer = document.getElementById('search-results');
                 coursesContainer.innerHTML = '';
 
-                if(courses.length>0){
-                    courses.forEach(function(course){
+                if (courses.length > 0) {
+                    courses.forEach(function(course) {
                         var titleElement = document.createElement('p');
                         titleElement.textContent = course.course_number + " " + course.title;
                         coursesContainer.appendChild(titleElement);
@@ -154,8 +150,12 @@
                                 }
                             }
 
-                             coursesContainer.appendChild(professorsElement);
-                         }
+                            coursesContainer.appendChild(professorsElement);
+                        }
+                        
+                        var equivalencyElement = document.createElement('p');
+                        equivalencyElement.textContent = 'Equivalency: ' + course.equivalency;
+                        coursesContainer.appendChild(equivalencyElement);
 
                         var descriptionElement = document.createElement('p');
                         descriptionElement.textContent = course.gpt_description;
@@ -163,16 +163,14 @@
 
                         var separatorElement = document.createElement('hr');
                         coursesContainer.appendChild(separatorElement);
-
                     });
-                }else{
+                } else {
                     var messageElement = document.createElement('p');
                     messageElement.textContent = data.message || 'No search results found.';
                     coursesContainer.appendChild(messageElement);
                 }
             });
         }
-
     </script>
 </body>
 </html>
