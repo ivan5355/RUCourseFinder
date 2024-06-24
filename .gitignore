@@ -1,6 +1,4 @@
 config.json
-myvenv/
+myenv/
 .idea/
-__pycache__/
-
-
+__pycache__
