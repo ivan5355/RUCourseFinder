@@ -26,7 +26,6 @@ courses_by_title = {}
 course_cache = {}
 
 
-
 community_colleges = {
     "Rowan College of South Jersey - Cumberland Campus": (39.4794, -75.0289),
     "Atlantic Cape Community College": (39.4572, -74.7229),
@@ -144,8 +143,6 @@ async def get_distance(your_location, community_college_location):
     async with aiohttp.ClientSession() as session:
         gmaps_client = AsyncClient(key=os.environ.get("GOOGLE_MAPS_API_KEY"), aiohttp_session=session)
         directions = await gmaps_client.directions(your_location, community_college_location, mode="driving", departure_time=datetime.now())
-    
- 
     
     distance_in_meters = directions[0]['legs'][0]['distance']['value']
     distance_in_miles = distance_in_meters * 0.000621371
