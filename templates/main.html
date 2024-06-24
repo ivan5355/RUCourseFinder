@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search Page</title>
+    <title>Rutgers to NJ Community College Course Equivalency Lookup</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -42,9 +42,9 @@
     </style>
 </head>
 <body>
-    <h1>Search Page</h1>
     <form id="search-form">
         <input type="text" id="search-bar" placeholder="Enter your search">
+        <button type="submit">Search</button>
     </form>
     <div id="search-results"></div>
 
@@ -114,6 +114,12 @@
             resultsContainer.innerHTML = '';
         }
 
+        document.getElementById('search-button').addEventListener('click', function(event) {
+            event.preventDefault();
+            clearSearch();
+            search();
+        });
+
         function search() {
             var searchTerm = document.getElementById('search-bar').value;
 
@@ -153,13 +159,27 @@
                             coursesContainer.appendChild(professorsElement);
                         }
                         
-                        var equivalencyElement = document.createElement('p');
-                        equivalencyElement.textContent = 'Equivalency: ' + course.equivalency;
-                        coursesContainer.appendChild(equivalencyElement);
-
                         var descriptionElement = document.createElement('p');
                         descriptionElement.textContent = course.gpt_description;
                         coursesContainer.appendChild(descriptionElement);
+
+                        if (course.equivalencies && course.equivalencies.length > 0) {
+                            var equivalencyElement = document.createElement('p');
+                            equivalencyElement.textContent = 'Equivalencies: ';
+                            course.equivalencies.forEach(function(equiv, index) {
+                             equivalencyElement.textContent += equiv.community_college + ' (' + equiv.Distance +' miles'+')'+ ' - ' + equiv.code + ' ' + equiv.name;
+                            if (index < course.equivalencies.length - 1) {
+                                equivalencyElement.textContent += ', ';
+                            }
+                        });
+                        coursesContainer.appendChild(equivalencyElement);
+                        } else {
+                            var noEquivElement = document.createElement('p');
+                            noEquivElement.textContent = 'No equivalencies found.';
+                            coursesContainer.appendChild(noEquivElement);
+                        }
+                        
+
 
                         var separatorElement = document.createElement('hr');
                         coursesContainer.appendChild(separatorElement);

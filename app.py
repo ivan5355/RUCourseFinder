@@ -1,6 +1,7 @@
 import json
 import difflib
 import os
+from pprint import pprint
 from typing import OrderedDict
 from quart import Quart, render_template, request, jsonify
 import asyncio
@@ -10,6 +11,7 @@ import pandas as pd
 import googlemaps as gmaps
 from datetime import datetime
 from openai import AsyncOpenAI
+from async_googlemaps import AsyncClient
 
 app = Quart(__name__, template_folder='templates')
 
@@ -23,7 +25,6 @@ courses_by_title = {}
 
 course_cache = {}
 
-your_location = None
 
 
 community_colleges = {
@@ -64,7 +65,8 @@ os.environ["OPENAI_API_KEY"] = config.get("OPENAI_API_KEY")
 client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 os.environ["GOOGLE_MAPS_API_KEY"] = config.get("GOOGLE_MAPS_API_KEY")
-gmaps_client = gmaps.Client(key=os.environ.get("GOOGLE_MAPS_API_KEY"))
+
+your_location = None
 
 @app.route('/')
 async def search_page():
@@ -135,21 +137,44 @@ async def save_location():
     return jsonify({'status': 'success', 'latitude': latitude, 'longitude': longitude})
 
 
-def get_distance(your_location, community_college_location):
+async def get_distance(your_location, community_college_location):
+
     if your_location is None or community_college_location is None:
         return float('inf')
+    async with aiohttp.ClientSession() as session:
+        gmaps_client = AsyncClient(key=os.environ.get("GOOGLE_MAPS_API_KEY"), aiohttp_session=session)
+        directions = await gmaps_client.directions(your_location, community_college_location, mode="driving", departure_time=datetime.now())
     
-    directions = gmaps_client.directions(your_location, community_college_location, mode="driving", departure_time=datetime.now())
+ 
+    
     distance_in_meters = directions[0]['legs'][0]['distance']['value']
     distance_in_miles = distance_in_meters * 0.000621371
     return distance_in_miles
 
-def get_top_5_course_equivalencies_by_distance(course_code):
+async def get_top_5_course_equivalencies_by_distance(course_code):
     equivalencies = pd.read_csv('community_to_college.csv')
     equivalencies = equivalencies[equivalencies['equivalency'] == course_code]
-    equivalencies['Distance'] = equivalencies['community_college'].apply(lambda x: get_distance(your_location, community_colleges.get(x)))
-    equivalencies['Distance'] = equivalencies['Distance'].apply(lambda x: f'{x:.2f} miles')
-    top_5 = equivalencies.sort_values('Distance').head(5)
+    
+    if equivalencies.empty:
+        return []
+    
+    distance_tasks = [get_distance(your_location, community_colleges.get(college)) 
+                      for college in equivalencies['community_college']]
+    distances = await asyncio.gather(*distance_tasks)
+    
+    equivalencies['Distance'] = distances
+    unique_colleges = set()
+    top_5 = []
+    
+    for _, row in equivalencies.sort_values('Distance').iterrows():
+        college = row['community_college']
+        if college not in unique_colleges:
+            unique_colleges.add(college)
+            top_5.append(row.to_dict())
+        
+            if len(top_5) == 5:
+                break
+
     return top_5
 
 @app.route('/search_by_title', methods=['POST'])
@@ -186,17 +211,18 @@ async def search():
         print(course['title'], instructors_for_course)
 
         course_code = course_string.replace(':', '')
-        # course_equivalencies = get_top_5_course_equivalencies_by_distance(course_code)
-        # print(course_equivalencies)
-        # course_equivalencies = course_equivalencies.to_dict(orient='records')
-        
+        course_equivalencies = await get_top_5_course_equivalencies_by_distance(course_code) 
+        pprint(course_equivalencies)
+
+    
         results.append({
             'gpt_description': chatgpt_description,
             'instructors': instructors_for_course,
             'title': course_title,
-            # 'equivalencies': course_equivalencies,
+            'equivalencies': course_equivalencies,
             'course_number': course_string
         })
+
     response_data = {
         'searchTerm': search_term,
         'courses': results
