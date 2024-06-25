@@ -12,6 +12,8 @@ import googlemaps as gmaps
 from datetime import datetime
 from openai import AsyncOpenAI
 from async_googlemaps import AsyncClient
+from hypercorn.config import Config
+from hypercorn.asyncio import serve
 
 app = Quart(__name__, template_folder='templates')
 
@@ -278,5 +280,8 @@ async def get_course_by_code():
 
     return jsonify(response_data)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    config = Config()
+    config.bind = [f"0.0.0.0:{port}"]
+    asyncio.run(serve(app, config))
