@@ -27,7 +27,6 @@ courses_by_title = {}
 
 course_cache = {}
 
-
 community_colleges = {
     "Rowan College of South Jersey - Cumberland Campus": (39.4794, -75.0289),
     "Atlantic Cape Community College": (39.4572, -74.7229),
@@ -73,11 +72,12 @@ your_location = None
 async def search_page():
     return await render_template('main.html')
 
+#gets the course descriptions for the courses 
 async def get_tasks(course_titles, session):
     tasks = []
     for title in course_titles:
         if title.lower() in course_cache:
-            continue  # Skip cached courses
+            continue  
         prompt = f"Tell me about the course {title} in 100 words. Make the description as descriptive as possible"
         task_coroutine = client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -87,6 +87,7 @@ async def get_tasks(course_titles, session):
         print(f"Added task for {title}")
     return tasks
 
+#Waits until the course descriptions are received and then returns the course descriptions at the same time
 async def get_course_descriptions(course_titles):
     start = time.time()
     async with aiohttp.ClientSession() as session:
@@ -114,14 +115,14 @@ async def get_course_descriptions(course_titles):
     write_cache_to_file(course_cache, 'course_cache.json')
     end = time.time()
     print(end - start)
-
     return course_descriptions
 
+#Writes the cache to a file
 def write_cache_to_file(cache, filename):
     with open(filename, 'w') as json_file:
         json.dump(cache, json_file, indent=4)
 
-
+#Reads the cache from a file
 @app.route('/save_location', methods=['POST'])
 async def save_location():
     data = await request.json
@@ -137,7 +138,7 @@ async def save_location():
 
     return jsonify({'status': 'success', 'latitude': latitude, 'longitude': longitude})
 
-
+#Gets the distance between the user's location and the community college
 async def get_distance(your_location, community_college_location):
 
     if your_location is None or community_college_location is None:
@@ -150,6 +151,7 @@ async def get_distance(your_location, community_college_location):
     distance_in_miles = distance_in_meters * 0.000621371
     return distance_in_miles
 
+#Gets the top 5 course equivalencies by distance
 async def get_top_5_course_equivalencies_by_distance(course_code):
     equivalencies = pd.read_csv('community_to_college.csv')
     equivalencies = equivalencies[equivalencies['equivalency'] == course_code]
@@ -157,6 +159,7 @@ async def get_top_5_course_equivalencies_by_distance(course_code):
     if equivalencies.empty:
         return []
     
+    # Gets the distance between the user's location and the community college and awaits the results
     distance_tasks = [get_distance(your_location, community_colleges.get(college)) 
                       for college in equivalencies['community_college']]
     distances = await asyncio.gather(*distance_tasks)
@@ -165,6 +168,7 @@ async def get_top_5_course_equivalencies_by_distance(course_code):
     unique_colleges = set()
     top_5 = []
     
+    # adds only the unique top 5 colleges to the top_5 list
     for _, row in equivalencies.sort_values('Distance').iterrows():
         college = row['community_college']
         if college not in unique_colleges:
@@ -176,14 +180,17 @@ async def get_top_5_course_equivalencies_by_distance(course_code):
 
     return top_5
 
+#searches for the course by title
 @app.route('/search_by_title', methods=['POST'])
 async def search():
     data = await request.json
     search_term = data.get('searchTerm')
+
     # Finds the 5 closest matches based on the course_titles
     close_matches = difflib.get_close_matches(search_term.lower(), courses_by_title.keys(), n=10)
     matching_courses = []
     course_titles = []
+
     # Loops through matches and adds objects to matching_course that have a matching title
     for match in close_matches:
         matching_course = courses_by_title.get(match)
@@ -194,12 +201,14 @@ async def search():
     
     results = []
     course_descriptions = await get_course_descriptions(course_titles)
+
     # Loops through matching_courses to extract the course code, course title, and instructors
     for course in matching_courses:
         course_string = course.get("courseString")
         course_title = course.get('title')
         sections = course.get('sections', [])
         instructors_for_course = []
+
         # Loops through each section to extract the instructors
         for section in sections:
             instructor_for_section = section.get('instructors', [])
@@ -228,6 +237,7 @@ async def search():
     }
     return jsonify(response_data)
 
+#Gets the course description
 async def get_course_description(course_title):
         prompt = f"Tell me about the course {title} in 100 words. Make the description as descriptive as possible"
         description = client.chat.completions.create(
@@ -236,6 +246,7 @@ async def get_course_description(course_title):
         )
         return description.choices[0].message.content
 
+#searches for the course by code
 @app.route('/search_by_code', methods=['POST'])
 async def get_course_by_code():
     data = await request.json

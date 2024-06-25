@@ -9,7 +9,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
-
 # Initialize the browser
 driver = webdriver.Chrome()
 
@@ -17,23 +16,27 @@ community_colleges = ["Atlantic-Cape Community College", 'Bergen Community Colle
                       
 colleges = ["Rutgers Business School - New Brunswick", "Rutgers-Edward Bloustein Sch of Planning & Policy", "Rutgers-Ernest Mario School of Pharmacy", "Rutgers-Mason Gross School of Arts", "Rutgers-School of Arts and Sciences", "Rutgers-School of Engineering", "Rutgers-School of Env Biological Sciences", "Rutgers-School of Management and Labor Relations", "Rutgers-School of Nursing"]
 
+# Initialize the browser
 driver = webdriver.Chrome()
 
 def get_classes(community_college, college):
     
     driver.get('https://njtransfer.org/artweb/chgri.cgi')
 
+    # Select the community college and college
     community_colleges = Select(driver.find_element(By.NAME, "SIInst"))
     community_colleges.select_by_visible_text(community_college)
 
     colleges = Select(driver.find_element(By.NAME, "RIInst"))
     colleges.select_by_visible_text(college)
 
+    # Click the submit button
     try:
       cookies_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, "acceptcookies")))
       cookies_button.click()
     except:
       pass
+
 
     submit_button = driver.find_element(By.NAME, "SubChgRI")
     submit_button.click()
@@ -63,9 +66,9 @@ def get_classes(community_college, college):
     return courses
 
 
-
 all_courses = []
 
+# Loop through all the community colleges and colleges
 for community_college in community_colleges:
     for college in colleges:
         courses = get_classes(community_college, college)
@@ -75,6 +78,7 @@ for community_college in community_colleges:
         else:
             print(f"Error getting courses for {community_college} and {college}")
 
+# Save the data to a CSV file
 df = pd.DataFrame(all_courses)
 df.to_csv('community_to_college.csv', index=False)
 
