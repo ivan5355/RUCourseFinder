@@ -2,3 +2,4 @@ config.json
 .idea/
 myenv/
 __pycache__
+railway.toml
