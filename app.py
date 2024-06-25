@@ -3,6 +3,7 @@ import difflib
 import os
 from pprint import pprint
 from typing import OrderedDict
+from dotenv import load_dotenv
 from quart import Quart, render_template, request, jsonify
 import asyncio
 import time
@@ -20,8 +21,6 @@ app = Quart(__name__, template_folder='templates')
 with open('rutgers_courses.json', 'r') as json_file:
     courses_data = json.load(json_file)
 
-with open('config.json', 'r') as config_file:
-    config = json.load(config_file)
 
 courses_by_title = {}
 
@@ -61,8 +60,12 @@ for course in courses_data:
     course_code = course.get('courseString').replace(':', '')
     courses_by_code[course_code] = course
 
-os.environ["OPENAI_API_KEY"] = config.get("OPENAI_API_KEY")
+load_dotenv()
+openai_api_key = os.getenv("OPENAI_API_KEY")
+google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+
 client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
 
 os.environ["GOOGLE_MAPS_API_KEY"] = config.get("GOOGLE_MAPS_API_KEY")
 
@@ -296,3 +299,6 @@ if __name__ == "__main__":
     config = Config()
     config.bind = [f"0.0.0.0:{port}"]
     asyncio.run(serve(app, config))
+
+# if __name__ == "__main__":
+#     app.run(port=5000)
