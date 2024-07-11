@@ -49,148 +49,173 @@
     <div id="search-results"></div>
 
     <script>
+        // Get user's location when the page loads  
         window.onload = function() {
-            getLocation();
+             getLocation();
         };
 
-        // Get user's location
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(sendPosition, showError);
-            } else {
-                document.getElementById("location").innerHTML = "Geolocation is not supported by this browser.";
-            }
+    // Get user's location
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(sendPosition, showError);
+        } else {
+            document.getElementById("location").innerHTML = "Geolocation is not supported by this browser.";
         }
+    }
 
-        // Send user's location to the server
-        function sendPosition(position) {
-            var latitude = position.coords.latitude;
-            var longitude = position.coords.longitude;
-        
-            fetch('/save_location', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    latitude: latitude,
-                    longitude: longitude
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Success:', data);
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-            });
-        }
+    // Send user's location to the server
+    function sendPosition(position) {
+        var latitude = position.coords.latitude;
+        var longitude = position.coords.longitude;
 
-        function showError(error) {
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    document.getElementById("location").innerHTML = "User denied the request for Geolocation.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    document.getElementById("location").innerHTML = "Location information is unavailable.";
-                    break;
-                case error.TIMEOUT:
-                    document.getElementById("location").innerHTML = "The request to get user location timed out.";
-                    break;
-                case error.UNKNOWN_ERROR:
-                    document.getElementById("location").innerHTML = "An unknown error occurred.";
-                    break;
-            }
-        }
-        
-        document.getElementById('search-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            clearSearch();
-            search();
+        fetch('/save_location', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                latitude: latitude,
+                longitude: longitude
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
         });
+    }
 
-        function clearSearch() {
-            var resultsContainer = document.getElementById('search-results');
-            resultsContainer.innerHTML = '';
+    // Handle errors for locations
+    function showError(error) {
+        switch(error.code) {
+            case error.PERMISSION_DENIED:
+                document.getElementById("location").innerHTML = "User denied the request for Geolocation.";
+                break;
+            case error.POSITION_UNAVAILABLE:
+                document.getElementById("location").innerHTML = "Location information is unavailable.";
+                break;
+            case error.TIMEOUT:
+                document.getElementById("location").innerHTML = "The request to get user location timed out.";
+                break;
+            case error.UNKNOWN_ERROR:
+                document.getElementById("location").innerHTML = "An unknown error occurred.";
+                break;
+        }
+    }
+
+    //search by title
+    document.getElementById('search-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        clearSearch();
+        search();
+    });
+
+    //clear search results
+    function clearSearch() {
+        var resultsContainer = document.getElementById('search-results');
+        resultsContainer.innerHTML = '';
+    }
+
+    // Save the courses to the cache
+    function saveCourses(searchTerm, courses) {
+        localStorage.setItem(searchTerm, JSON.stringify(courses));
+    }
+
+    // Get the courses from the cache
+    function getCachedCourses(searchTerm) {
+        const cachedData = localStorage.getItem(searchTerm);
+        return cachedData ? JSON.parse(cachedData) : null;
+    }
+
+    //search by title
+    function search() {
+        var searchTerm = document.getElementById('search-bar').value;
+
+        // Check if the results are in the cache
+        const cachedCourses = getCachedCourses(searchTerm);
+        if (cachedCourses) {
+            displayCourses(cachedCourses);
+            return;
         }
 
-        document.getElementById('search-button').addEventListener('click', function(event) {
-            event.preventDefault();
-            clearSearch();
-            search();
+        fetch('/search_by_title', {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ searchTerm: searchTerm }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            var courses = data.courses || [];
+            
+            // Save the courses to the cache
+            saveCourses(searchTerm, courses);
+
+             // Display the courses
+            displayCourses(courses);
         });
+    }
 
-        function search() {
-            var searchTerm = document.getElementById('search-bar').value;
+    // Display the courses
+    function displayCourses(courses) {
+        var coursesContainer = document.getElementById('search-results');
+        coursesContainer.innerHTML = '';
 
-            fetch('/search_by_title', {
-                method: "POST",
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ searchTerm: searchTerm }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                var courses = data.courses || [];
+        if (courses.length > 0) {
+            courses.forEach(function(course) {
+                var titleElement = document.createElement('p');
+                titleElement.textContent = course.course_number + " " + course.title;
+                coursesContainer.appendChild(titleElement);
 
-                var coursesContainer = document.getElementById('search-results');
-                coursesContainer.innerHTML = '';
+                if (course.instructors.length > 0) {
+                    var professorsElement = document.createElement('p');
+                    professorsElement.textContent = 'Professors: ';
 
-                if (courses.length > 0) {
-                    courses.forEach(function(course) {
-                        var titleElement = document.createElement('p');
-                        titleElement.textContent = course.course_number + " " + course.title;
-                        coursesContainer.appendChild(titleElement);
+                    for (var i = 0; i < course.instructors.length; i++) {
+                        var professor = course.instructors[i][0];
+                        professorsElement.textContent += professor.name;
 
-                        if (course.instructors.length > 0) {
-                            var professorsElement = document.createElement('p');
-                            professorsElement.textContent = 'Professors: ';
-
-                            for (var i = 0; i < course.instructors.length; i++) {
-                                var professor = course.instructors[i][0];
-                                professorsElement.textContent += professor.name;
-
-                                if (i < course.instructors.length - 1) {
-                                    professorsElement.textContent += ', ';
-                                }
-                            }
-
-                            coursesContainer.appendChild(professorsElement);
+                        if (i < course.instructors.length - 1) {
+                            professorsElement.textContent += ', ';
                         }
-                        
-                        var descriptionElement = document.createElement('p');
-                        descriptionElement.textContent = course.gpt_description;
-                        coursesContainer.appendChild(descriptionElement);
+                    }
 
-                        if (course.equivalencies && course.equivalencies.length > 0) {
-                            var equivalencyElement = document.createElement('p');
-                            equivalencyElement.textContent = 'Equivalencies: ';
-                            course.equivalencies.forEach(function(equiv, index) {
-                             equivalencyElement.textContent += equiv.community_college + ' (' + equiv.Distance +' miles'+')'+ ' - ' + equiv.code + ' ' + equiv.name;
-                            if (index < course.equivalencies.length - 1) {
-                                equivalencyElement.textContent += ', ';
-                            }
-                        });
-                        coursesContainer.appendChild(equivalencyElement);
-                        } else {
-                            var noEquivElement = document.createElement('p');
-                            noEquivElement.textContent = 'No equivalencies found.';
-                            coursesContainer.appendChild(noEquivElement);
-                        }
-                        
-
-
-                        var separatorElement = document.createElement('hr');
-                        coursesContainer.appendChild(separatorElement);
-                    });
-                } else {
-                    var messageElement = document.createElement('p');
-                    messageElement.textContent = data.message || 'No search results found.';
-                    coursesContainer.appendChild(messageElement);
+                    coursesContainer.appendChild(professorsElement);
                 }
+                
+                var descriptionElement = document.createElement('p');
+                descriptionElement.textContent = course.gpt_description;
+                coursesContainer.appendChild(descriptionElement);
+
+                // Display the equivalencies
+                if (course.equivalencies && course.equivalencies.length > 0) {
+                    var equivalencyElement = document.createElement('p');
+                    equivalencyElement.textContent = 'Equivalencies: ';
+                    course.equivalencies.forEach(function(equiv, index) {
+                        equivalencyElement.textContent += equiv.community_college + ' (' + equiv.Distance +' miles'+')'+ ' - ' + equiv.code + ' ' + equiv.name;
+                        if (index < course.equivalencies.length - 1) {
+                            equivalencyElement.textContent += ', ';
+                        }
+                    });
+                    coursesContainer.appendChild(equivalencyElement);
+                } else {
+                    var noEquivElement = document.createElement('p');
+                    noEquivElement.textContent = 'No equivalencies found.';
+                    coursesContainer.appendChild(noEquivElement);
+                }
+
+                var separatorElement = document.createElement('hr');
+                coursesContainer.appendChild(separatorElement);
             });
+        } else {
+            var messageElement = document.createElement('p');
+            messageElement.textContent = 'No search results found.';
+            coursesContainer.appendChild(messageElement);
         }
+    }
     </script>
 </body>
 </html>
