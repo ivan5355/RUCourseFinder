@@ -270,11 +270,11 @@ async def search_by_code():
 
     return jsonify(results)
 
-# if __name__ == '__main__':
-#     config = Config()
-#     config.bind = ["0.0.0.0:8000"]
-#     config.use_reloader = True
-#     asyncio.run(serve(app, config))
-
 if __name__ == '__main__':
-    app.run(debug=True)
+    config = Config()
+    config.bind = ["0.0.0.0:8000"]
+    config.use_reloader = True
+    asyncio.run(serve(app, config))
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
