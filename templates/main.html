@@ -4,49 +4,165 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rutgers to NJ Community College Course Equivalency Lookup</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 20px;
+         body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
             text-align: center;
         }
 
+        .top-banner {
+            background-color: #cc0033;
+            color: white;
+            padding: 5px 0;
+        }
+
         h1 {
-            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 16px;
+            font-weight: 300;
+            margin-top: 0;
         }
 
         #search-form {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-top: 20px;
+            margin: 40px 0;
         }
 
         #search-bar {
-            width: 250px;
-            padding: 10px;
+            width: 400px;
+            padding: 12px;
+            margin-top:-10px;
             font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 5px 0 0 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+            outline: none;
+        }
+
+        #search-button {
+            padding: 12px 20px;
+            margin-top: -10px;
+            font-size: 16px;
+            background-color: #cc0033;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #search-button:hover {
+            background-color: #a50029;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #cc0033;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         #search-results {
-            margin-top: 20px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #f9f9f9;
+            margin-top: 40px;
             text-align: left;
         }
+
+        .course {
+            background-color: white;
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: box-shadow 0.3s;
+        }
+
+        .course:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .course h3 {
+            margin-top: 0;
+            color: #cc0033;
+        }
+        
+        .no-results {
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            #search-bar {
+                width: 100%;
+            }
+
+            #search-form {
+                flex-direction: column;
+            }
+
+            #search-button {
+                width: 100%;
+                border-radius: 4px;
+                margin-top: 10px;
+            }
+        }
+      
 
     </style>
 </head>
 <body>
-    <form id="search-form">
-        <input type="text" id="search-bar" placeholder="Enter your search">
-        <button type="submit">Search</button>
-    </form>
-    <div id="search-results"></div>
+    <div class="top-banner">
+        <div class="container">
+            <h1>Rutgers to NJ Community Equivalenies</h1>
+            <h3>Find equivalent courses from New Jersey community colleges with ease</h3>
+        </div>
+    </div>
+    <div class="container">
+        <form id="search-form">
+            <input type="text" id="search-bar" placeholder="Enter course title">
+            <button type="submit" id="search-button">
+                <i class="fas fa-search"></i> 
+            </button>
+        </form>
+    </div>
+
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading results...</p>
+        </div>
+
+        <div id="search-results"></div>
+
 
     <script>
         // Get user's location when the page loads  
@@ -131,14 +247,23 @@
 
     //search by title
     function search() {
-        var searchTerm = document.getElementById('search-bar').value;
+    
 
         // Check if the results are in the cache
         const cachedCourses = getCachedCourses(searchTerm);
         if (cachedCourses) {
             displayCourses(cachedCourses);
+            loadingElement.style.display = 'none';
             return;
         }
+
+        var searchTerm = document.getElementById('search-bar').value;
+        var loadingElement = document.querySelector('.loading');
+        var resultsContainer = document.getElementById('search-results');
+
+        // Show loading spinner
+        loadingElement.style.display = 'block';
+        resultsContainer.innerHTML = '';
 
         fetch('/search_by_title', {
             method: "POST",
@@ -156,6 +281,13 @@
 
              // Display the courses
             displayCourses(courses);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        })
+        .finally(() => {
+            // Hide loading spinner
+            loadingElement.style.display = 'none';
         });
     }
 
