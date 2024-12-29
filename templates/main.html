@@ -140,6 +140,7 @@
 
     </style>
 </head>
+
 <body>
     <div class="top-banner">
         <div class="container">
@@ -207,16 +208,16 @@
     function showError(error) {
         switch(error.code) {
             case error.PERMISSION_DENIED:
-                document.getElementById("location").innerHTML = "User denied the request for Geolocation.";
+                console.log("User denied the request for Geolocation.");
                 break;
             case error.POSITION_UNAVAILABLE:
-                document.getElementById("location").innerHTML = "Location information is unavailable.";
+                console.log("Location information is unavailable.");
                 break;
             case error.TIMEOUT:
-                document.getElementById("location").innerHTML = "The request to get user location timed out.";
+                console.log("The request to get user location timed out.");
                 break;
             case error.UNKNOWN_ERROR:
-                document.getElementById("location").innerHTML = "An unknown error occurred.";
+                console.log("An unknown error occurred.");
                 break;
         }
     }
@@ -318,9 +319,11 @@
                     coursesContainer.appendChild(professorsElement);
                 }
                 
-                var descriptionElement = document.createElement('p');
-                descriptionElement.textContent = course.gpt_description;
-                coursesContainer.appendChild(descriptionElement);
+                var prereqElement = document.createElement('p');
+
+                prereqElement.textContent = 'Prerequisites: ' + course.prerequisites;
+                coursesContainer.appendChild(prereqElement);
+               
 
                 // Display the equivalencies
                 if (course.equivalencies && course.equivalencies.length > 0) {

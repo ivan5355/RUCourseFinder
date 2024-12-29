@@ -1,27 +1,16 @@
 import json
 import difflib
 import os
-from pprint import pprint
-from typing import OrderedDict
-from dotenv import load_dotenv
 from quart import Quart, render_template, request, jsonify
 import asyncio
-import time
 import aiohttp
 import pandas as pd
-import googlemaps as gmaps
-from datetime import datetime
-from openai import AsyncOpenAI
-from async_googlemaps import AsyncClient
-from hypercorn.config import Config
-from hypercorn.asyncio import serve
 
 app = Quart(__name__, template_folder='templates')
 
 # Loads the Rutgers courses from the JSON file
 with open('rutgers_courses.json', 'r') as json_file:
     courses_data = json.load(json_file)
-
 
 courses_by_title = {}
 
@@ -59,62 +48,14 @@ for course in courses_data:
     course_code = course.get('courseString').replace(':', '')
     courses_by_code[course_code] = course
 
-load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
-google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-
-client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-
 your_location = None
 
 @app.route('/')
 async def search_page():
     return await render_template('main.html')
 
-# Gets the course descriptions for the courses 
-async def get_tasks(course_titles, session):
-    tasks = []
-    for title in course_titles:
-        prompt = f"Tell me about the course {title} in 100 words. Make the description as descriptive as possible"
-        task_coroutine = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-        )
-        tasks.append((title, task_coroutine))
-        print(f"Added task for {title}")
-    return tasks
 
-# Waits until the course descriptions are received and then returns the course descriptions at the same time
-async def get_course_descriptions(course_titles):
-    start = time.time()
-    async with aiohttp.ClientSession() as session:
-        tasks = await get_tasks(course_titles, session)
-        
-        course_descriptions = {}  # Dictionary to store course descriptions
-
-        # Gather all tasks
-        responses = await asyncio.gather(*(task for title, task in tasks))
-
-        # Process responses
-        for (title, _), response in zip(tasks, responses):
-            result_text = response.choices[0].message.content
-            course_descriptions[title] = result_text
-            print(f"Finished task for course: {title}")
-
-    end = time.time()
-    print(end - start)
-    return course_descriptions
-
-# Gets the course description
-async def get_course_description(course_title):
-    prompt = f"Tell me about the course {course_title} in 100 words. Make the description as descriptive as possible"
-    description = await client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return description.choices[0].message.content
-
-
+# Gets the course descriptions for the courses
 @app.route('/save_location', methods=['POST'])
 async def save_location():
     data = await request.json
@@ -122,6 +63,7 @@ async def save_location():
     longitude = data.get('longitude')
     global your_location
     your_location = (latitude, longitude)
+    print(f"Received location: Latitude={latitude}, Longitude={longitude}")
 
     if your_location is not None:
         print(f"Received location: Latitude={latitude}, Longitude={longitude}")
@@ -132,25 +74,49 @@ async def save_location():
 
 # Gets the distance between the user's location and the community college
 async def get_distance(your_location, community_college_location):
-
+    """
+    Calculate the driving distance between two locations using the Mapbox Directions API.
+    """
     if your_location is None or community_college_location is None:
         return float('inf')
-    async with aiohttp.ClientSession() as session:
-        gmaps_client = AsyncClient(key=os.environ.get("GOOGLE_MAPS_API_KEY"), aiohttp_session=session)
-        directions = await gmaps_client.directions(your_location, community_college_location, mode="driving", departure_time=datetime.now())
-    
-    distance_in_meters = directions[0]['legs'][0]['distance']['value']
-    distance_in_miles = distance_in_meters * 0.000621371
-    return distance_in_miles
 
+    # Mapbox API URL for Directions
+    base_url = "https://api.mapbox.com/directions/v5/mapbox/driving"
+    
+    # Coordinates as Longitude, Latitude format
+    start = f"{your_location[1]},{your_location[0]}"  
+    end = f"{community_college_location[1]},{community_college_location[0]}"  
+    
+    access_token = os.getenv("MAPBOX_ACCESS_TOKEN")
+
+    url = f"{base_url}/{start};{end}?access_token={access_token}&geometries=geojson&overview=simplified&annotations=distance"
+    
+    # Asynchronously make the request
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+                data = await response.json()
+
+                # Get the distance in meters
+                distance_in_meters = data['routes'][0]['legs'][0]['distance']
+
+                # Convert meters to miles (1 mile = 1609.34 meters)
+                distance_in_miles = round((distance_in_meters / 1609.34), 2)
+  
+                print(f"Distance: {distance_in_miles:.2f} miles")
+
+                return distance_in_miles
+       
 # Gets the top 5 course equivalencies by distance
 async def get_top_5_course_equivalencies_by_distance(course_code):
     equivalencies = pd.read_csv('community_to_college.csv')
     equivalencies = equivalencies[equivalencies['equivalency'] == course_code]
-    
+
     if equivalencies.empty:
+        print(f"No course equivalencies found for {course_code}")
         return []
-    
+    else:
+        print(f"Found course equivalencies for {course_code}")
+
     # Gets the distance between the user's location and the community college and awaits the results
     distance_tasks = [get_distance(your_location, community_colleges.get(college)) 
                       for college in equivalencies['community_college']]
@@ -169,6 +135,9 @@ async def get_top_5_course_equivalencies_by_distance(course_code):
         
             if len(top_5) == 5:
                 break
+
+    if not top_5:
+        print("No course equivalencies found.")
 
     return top_5
 
@@ -192,12 +161,16 @@ async def search():
         return jsonify({'searchTerm': search_term, 'message': 'No search results found.'})
     
     results = []
-    course_descriptions = await get_course_descriptions(course_titles)
 
     # Loops through matching_courses to extract the course code, course title, and instructors
     for course in matching_courses:
         course_string = course.get("courseString")
         course_title = course.get('title')
+        preq = course.get('prerequisites')
+
+        if preq is None:
+            preq = "None"
+            
         sections = course.get('sections', [])
         instructors_for_course = []
 
@@ -207,18 +180,19 @@ async def search():
             if instructor_for_section not in instructors_for_course:
                 instructors_for_course.append(instructor_for_section)
 
-        chatgpt_description = course_descriptions.get(course_title.lower())
         print(course['title'], instructors_for_course)
 
         course_code = course_string.replace(':', '')
+
+        # Gets the top 5 course equivalencies by distance
         course_equivalencies = await get_top_5_course_equivalencies_by_distance(course_code) 
-        pprint(course_equivalencies)
 
     
+      
         results.append({
-            'gpt_description': chatgpt_description,
             'instructors': instructors_for_course,
             'title': course_title,
+            'prerequisites': preq,
             'equivalencies': course_equivalencies,
             'course_number': course_string
         })
@@ -229,52 +203,5 @@ async def search():
     }
     return jsonify(response_data)
 
-
-# Searches for the course by course code
-@app.route('/search_by_code', methods=['POST'])
-async def search_by_code():
-    data = await request.json
-    search_term = data.get('searchTerm')
-
-    # Converts the search term to the same format as the JSON data
-    search_term_formatted = search_term.replace(':', '').upper()
-    matching_course = courses_by_code.get(search_term_formatted)
-
-    if not matching_course:
-        return jsonify({'searchTerm': search_term, 'message': 'No search results found.'})
-    
-    chatgpt_description = await get_course_description(matching_course.get('title'))
-    instructors_for_course = []
-    course_string = matching_course.get("courseString")
-    course_title = matching_course.get('title')
-    sections = matching_course.get('sections', [])
-
-    # Loops through each section to extract the instructors
-    for section in sections:
-        instructor_for_section = section.get('instructors', [])
-        if instructor_for_section not in instructors_for_course:
-            instructors_for_course.append(instructor_for_section)
-
-    course_code = course_string.replace(':', '')
-    course_equivalencies = await get_top_5_course_equivalencies_by_distance(course_code) 
-    pprint(course_equivalencies)
-
-    results = {
-        'searchTerm': search_term,
-        'gpt_description': chatgpt_description,
-        'instructors': instructors_for_course,
-        'title': course_title,
-        'equivalencies': course_equivalencies,
-        'course_number': course_string
-    }
-
-    return jsonify(results)
-
 if __name__ == '__main__':
-    config = Config()
-    config.bind = ["0.0.0.0:8000"]
-    config.use_reloader = True
-    asyncio.run(serve(app, config))
-
-# if __name__ == '__main__':
-#     app.run(debug=True)
+    app.run(debug=True)
