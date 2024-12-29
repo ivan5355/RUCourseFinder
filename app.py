@@ -1,10 +1,13 @@
 import json
 import difflib
 import os
+import numpy as np
 from quart import Quart, render_template, request, jsonify
 import asyncio
 import aiohttp
 import pandas as pd
+import openai
+from pinecone import Pinecone
 
 app = Quart(__name__, template_folder='templates')
 
@@ -12,7 +15,17 @@ app = Quart(__name__, template_folder='templates')
 with open('rutgers_courses.json', 'r') as json_file:
     courses_data = json.load(json_file)
 
-courses_by_title = {}
+openai.api_key = os.getenv("OPENAI_API_KEY")
+pinecone_api_key = os.getenv("PINECONE_API_KEY")
+
+# Initialize Pinecone client
+pc = Pinecone(api_key=pinecone_api_key)
+
+index_name = "courses"
+
+# Connect to the Pinecone index
+index = pc.Index(index_name)
+
 
 community_colleges = {
     "Rowan College of South Jersey - Cumberland Campus": (39.4794, -75.0289),
@@ -37,6 +50,9 @@ community_colleges = {
     "Warren County Community College": (40.7594, -75.0089)
 }
 
+
+courses_by_title = {}
+
 # Maps the titles of courses to objects
 for course in courses_data:
     title = course.get('title').lower()
@@ -53,6 +69,13 @@ your_location = None
 @app.route('/')
 async def search_page():
     return await render_template('main.html')
+
+def generate_embeddings(text):
+    response = openai.Embedding.create(
+        model="text-embedding-ada-002",
+        input=text
+    )
+    return np.array(response['data'][0]['embedding'])
 
 
 # Gets the course descriptions for the courses
@@ -94,6 +117,7 @@ async def get_distance(your_location, community_college_location):
     # Asynchronously make the request
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
+
                 data = await response.json()
 
                 # Get the distance in meters
@@ -101,14 +125,16 @@ async def get_distance(your_location, community_college_location):
 
                 # Convert meters to miles (1 mile = 1609.34 meters)
                 distance_in_miles = round((distance_in_meters / 1609.34), 2)
-  
-                print(f"Distance: {distance_in_miles:.2f} miles")
 
                 return distance_in_miles
-       
+            
+        
 # Gets the top 5 course equivalencies by distance
 async def get_top_5_course_equivalencies_by_distance(course_code):
+
     equivalencies = pd.read_csv('community_to_college.csv')
+
+    # Filters the equivalencies by the course code
     equivalencies = equivalencies[equivalencies['equivalency'] == course_code]
 
     if equivalencies.empty:
@@ -141,22 +167,53 @@ async def get_top_5_course_equivalencies_by_distance(course_code):
 
     return top_5
 
+
+# Function to search for the most similar courses to a given query
+def search_courses(query, top_k):
+
+    # Generate the embedding for the search query
+    query_embedding = generate_embeddings(query)
+
+    # Perform the search in Pinecone
+    result = index.query(
+        vector=query_embedding.tolist(),  
+        top_k=top_k,
+        include_metadata=True
+    )
+
+    if not result['matches']:
+        print(f"No matches found for query: {query}")
+    else:
+        print(f"Found {len(result['matches'])} matches for query: {query}")
+        for match in result['matches']:
+            print(f"Course ID: {match['id']}, Score: {match['score']}")
+
+    # Extract the course titles from the search results
+    course_titles = [match['id'] for match in result['matches']]
+
+    return course_titles
+
 # Searches for the course by title
 @app.route('/search_by_title', methods=['POST'])
 async def search():
     data = await request.json
     search_term = data.get('searchTerm')
 
-    # Finds the 5 closest matches based on the course_titles
-    close_matches = difflib.get_close_matches(search_term.lower(), courses_by_title.keys(), n=10)
+    # Finds the top 10 closest matches based on the course_titles. Stored as list of strings
+    close_matches = search_courses(search_term, top_k=10)
+    print(f"Close matches: {close_matches}")
+       
     matching_courses = []
     course_titles = []
 
-    # Loops through matches and adds objects to matching_course that have a matching title
+    # Loops through matches and adds course objects to matching_course that have a matching title
     for match in close_matches:
-        matching_course = courses_by_title.get(match)
+
+        matching_course = courses_by_title.get(match.lower())
+      
         matching_courses.append(matching_course)
         course_titles.append(match)
+
     if not matching_courses:
         return jsonify({'searchTerm': search_term, 'message': 'No search results found.'})
     
@@ -166,11 +223,11 @@ async def search():
     for course in matching_courses:
         course_string = course.get("courseString")
         course_title = course.get('title')
-        preq = course.get('prerequisites')
+        preq = course.get('preReqNotes')
 
         if preq is None:
-            preq = "None"
-            
+            preq = "No prerequisites"
+
         sections = course.get('sections', [])
         instructors_for_course = []
 
@@ -187,8 +244,6 @@ async def search():
         # Gets the top 5 course equivalencies by distance
         course_equivalencies = await get_top_5_course_equivalencies_by_distance(course_code) 
 
-    
-      
         results.append({
             'instructors': instructors_for_course,
             'title': course_title,

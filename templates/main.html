@@ -319,10 +319,15 @@
                     coursesContainer.appendChild(professorsElement);
                 }
                 
+                
                 var prereqElement = document.createElement('p');
 
-                prereqElement.textContent = 'Prerequisites: ' + course.prerequisites;
+                // Remove <em> and </em> tags from the prerequisites string
+                var cleanedPrerequisites = course.prerequisites.replace(/<\/?em>/g, '');
+
+                prereqElement.textContent = 'Prerequisites: ' + cleanedPrerequisites;
                 coursesContainer.appendChild(prereqElement);
+          
                
 
                 // Display the equivalencies
