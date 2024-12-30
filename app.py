@@ -23,9 +23,10 @@ pc = Pinecone(api_key=pinecone_api_key)
 
 index_name = "courses"
 
+
+
 # Connect to the Pinecone index
 index = pc.Index(index_name)
-
 
 community_colleges = {
     "Rowan College of South Jersey - Cumberland Campus": (39.4794, -75.0289),
@@ -58,11 +59,26 @@ for course in courses_data:
     title = course.get('title').lower()
     courses_by_title[title] = course
 
-# Maps the course code to objects
-courses_by_code = {}
+instructors_courses = {}
+
+# Modify the instructors_courses mapping
 for course in courses_data:
-    course_code = course.get('courseString').replace(':', '')
-    courses_by_code[course_code] = course
+    title = course.get('title')
+    course_string = course.get('courseString')
+    
+    sections = course.get('sections', [])
+    for section in sections:
+        instructors = section.get('instructors', [])
+        
+        # Handle multiple instructors per section
+        for instructor in instructors:
+            instructor_name = instructor.get('name', '')  # Get the instructor's name
+            if instructor_name not in instructors_courses:
+                instructors_courses[instructor_name] = []
+            # Store both title and course string
+            course_info = {'title': title, 'courseString': course_string}
+            if course_info not in instructors_courses[instructor_name]:
+                instructors_courses[instructor_name].append(course_info)
 
 your_location = None
 
@@ -257,6 +273,33 @@ async def search():
         'courses': results
     }
     return jsonify(response_data)
+
+# Add new endpoint for professor search
+@app.route('/search_by_professor', methods=['POST'])
+async def search_by_professor():
+    data = await request.json
+    search_term = data.get('searchTerm', '').lower()
+    
+    matching_professors = []
+    for professor in instructors_courses.keys():
+        if search_term in professor.lower():
+            matching_professors.append(professor)
+    
+    results = []
+    for professor in matching_professors:
+        courses = instructors_courses[professor]
+        results.append({
+            'professor': professor,
+            'courses': courses
+        })
+    
+    if not results:
+        return jsonify({'searchTerm': search_term, 'message': 'No professors found.'})
+    
+    return jsonify({
+        'searchTerm': search_term,
+        'results': results
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
