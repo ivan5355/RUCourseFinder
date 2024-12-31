@@ -162,15 +162,18 @@
             <div class="form-group">
                 <div class="toggle-container">
                     <label for="toggle-course-title">
-                        <input type="radio" name="search-option" id="toggle-course-title" class="toggle-radio"> Search by Course Title
+                        <input type="radio" name="search-option" id="toggle-course-title" class="toggle-radio" checked> Search by Course Title
                     </label>
                     <label for="toggle-professor">
                         <input type="radio" name="search-option" id="toggle-professor" class="toggle-radio"> Search Courses by Professor
                     </label>
+                    <label for="toggle-course-code">
+                        <input type="radio" name="search-option" id="toggle-course-code" class="toggle-radio"> Search by Course Code
+                    </label>
                 </div>
             </div>
             <div class="form-group">
-                <input type="text" id="search-bar"  />
+                <input type="text" id="search-bar" placeholder="Enter course title (e.g., Calculus)" />
             </div>
             <div class="form-group">
                 <button type="submit" id="search-button">
@@ -190,9 +193,10 @@
 
 
     <script>
-        let currentSearchType = 'title'; // Default search type
 
-        // Add event listeners for radio buttons
+        let currentSearchType = 'title'; 
+
+        // Event listeners for radio buttons
         document.getElementById('toggle-course-title').addEventListener('change', function() {
             currentSearchType = 'title';
             document.getElementById('search-bar').placeholder = "Enter course title (e.g., Calculus)";
@@ -201,6 +205,11 @@
         document.getElementById('toggle-professor').addEventListener('change', function() {
             currentSearchType = 'professor';
             document.getElementById('search-bar').placeholder = "Enter professor name (e.g., Smith)";
+        });
+
+        document.getElementById('toggle-course-code').addEventListener('change', function() {
+            currentSearchType = 'code';
+            document.getElementById('search-bar').placeholder = "Enter last 3 digits of course code (e.g., 101)";
         });
 
         // Get user's location when the page loads  
@@ -272,17 +281,6 @@
         resultsContainer.innerHTML = '';
     }
 
-    // Save the courses to the cache
-    function saveCourses(searchTerm, courses) {
-        localStorage.setItem(searchTerm, JSON.stringify(courses));
-    }
-
-    // Get the courses from the cache
-    function getCachedCourses(searchTerm) {
-        const cachedData = localStorage.getItem(searchTerm);
-        return cachedData ? JSON.parse(cachedData) : null;
-    }
-
     //search by title
     function search() {
         var searchTerm = document.getElementById('search-bar').value;
@@ -294,7 +292,20 @@
         resultsContainer.innerHTML = '';
 
         // Determine which endpoint to use based on search type
-        const endpoint = currentSearchType === 'title' ? '/search_by_title' : '/search_by_professor';
+        let endpoint;
+        switch(currentSearchType) {
+            case 'title':
+                endpoint = '/search_by_title';
+                break;
+            case 'professor':
+                endpoint = '/search_by_professor';
+                break;
+            case 'code':
+                endpoint = '/search_by_code';
+                break;
+            default:
+                endpoint = '/search_by_title';
+        }
 
         fetch(endpoint, {
             method: "POST",
@@ -305,7 +316,7 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (currentSearchType === 'title') {
+            if (currentSearchType === 'title' || currentSearchType === 'code') {
                 displayCourses(data.courses || []);
             } else {
                 displayProfessorResults(data.results || []);
@@ -347,7 +358,6 @@
                     coursesContainer.appendChild(professorsElement);
                 }
                 
-                
                 var prereqElement = document.createElement('p');
 
                 // Remove <em> and </em> tags from the prerequisites string
@@ -355,7 +365,6 @@
 
                 prereqElement.textContent = 'Prerequisites: ' + cleanedPrerequisites;
                 coursesContainer.appendChild(prereqElement);
-          
 
                 // Display the equivalencies
                 if (course.equivalencies && course.equivalencies.length > 0) {
@@ -367,6 +376,7 @@
                             equivalencyElement.textContent += ', ';
                         }
                     });
+
                     coursesContainer.appendChild(equivalencyElement);
                 } else {
                     var noEquivElement = document.createElement('p');
@@ -377,6 +387,7 @@
                 var separatorElement = document.createElement('hr');
                 coursesContainer.appendChild(separatorElement);
             });
+
         } else {
             var messageElement = document.createElement('p');
             messageElement.textContent = 'No search results found.';
@@ -384,13 +395,14 @@
         }
     }
 
-    // Add new function to display professor search results
+    // displays courses taught by professor
     function displayProfessorResults(results) {
         var coursesContainer = document.getElementById('search-results');
         coursesContainer.innerHTML = '';
 
         if (results.length > 0) {
             results.forEach(function(result) {
+
                 var professorDiv = document.createElement('div');
                 professorDiv.className = 'course';
 
@@ -399,6 +411,7 @@
                 professorDiv.appendChild(professorName);
 
                 var coursesList = document.createElement('div');
+
                 result.courses.forEach(function(course) {
                     var courseInfo = document.createElement('p');
                     courseInfo.textContent = `${course.courseString} - ${course.title}`;
@@ -408,6 +421,8 @@
                 professorDiv.appendChild(coursesList);
                 coursesContainer.appendChild(professorDiv);
             });
+
+        //if no results are found
         } else {
             var messageElement = document.createElement('p');
             messageElement.className = 'no-results';

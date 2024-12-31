@@ -23,8 +23,6 @@ pc = Pinecone(api_key=pinecone_api_key)
 
 index_name = "courses"
 
-
-
 # Connect to the Pinecone index
 index = pc.Index(index_name)
 
@@ -51,30 +49,41 @@ community_colleges = {
     "Warren County Community College": (40.7594, -75.0089)
 }
 
-
 courses_by_title = {}
+courses_by_code = {} 
 
-# Maps the titles of courses to objects
+# Maps the titles and codes of courses to course objects
 for course in courses_data:
     title = course.get('title').lower()
+    course_string = course.get('courseString', '')
+    
+    # Map by title
     courses_by_title[title] = course
+    
+    # Map by full course code (removing colon)
+    full_code = course_string.replace(':', '').strip()
+    courses_by_code[full_code] = course
 
 instructors_courses = {}
 
-# Modify the instructors_courses mapping
+#Maps the instructor to their courses
 for course in courses_data:
+
     title = course.get('title')
     course_string = course.get('courseString')
     
     sections = course.get('sections', [])
+
     for section in sections:
         instructors = section.get('instructors', [])
         
         # Handle multiple instructors per section
         for instructor in instructors:
-            instructor_name = instructor.get('name', '')  # Get the instructor's name
+
+            instructor_name = instructor.get('name', '')  
             if instructor_name not in instructors_courses:
                 instructors_courses[instructor_name] = []
+
             # Store both title and course string
             course_info = {'title': title, 'courseString': course_string}
             if course_info not in instructors_courses[instructor_name]:
@@ -274,18 +283,23 @@ async def search():
     }
     return jsonify(response_data)
 
-# Add new endpoint for professor search
+#Search by professor
 @app.route('/search_by_professor', methods=['POST'])
 async def search_by_professor():
+
     data = await request.json
     search_term = data.get('searchTerm', '').lower()
     
     matching_professors = []
+
+    # Search through the instructor:courses dictionary to get the courses taught by a professor
     for professor in instructors_courses.keys():
         if search_term in professor.lower():
             matching_professors.append(professor)
     
     results = []
+
+    # Store the professor and their courses in a list of dictionaries 
     for professor in matching_professors:
         courses = instructors_courses[professor]
         results.append({
@@ -299,6 +313,54 @@ async def search_by_professor():
     return jsonify({
         'searchTerm': search_term,
         'results': results
+    })
+
+@app.route('/search_by_code', methods=['POST'])
+async def search_by_code():
+    data = await request.json
+    search_term = data.get('searchTerm', '')
+    
+    # Ensure search term is numeric
+    if not search_term.isdigit():
+        return jsonify({'searchTerm': search_term, 'message': 'Please enter only digits.'})
+    
+    matching_courses = []
+    
+    # Search for courses where the code ends with the search term
+    for full_code, course in courses_by_code.items():
+
+        if full_code.endswith(search_term):
+
+            course_string = course.get('courseString')
+            course_code = course_string.replace(':', '')
+            preq = course.get('preReqNotes') or "No prerequisites"
+            
+            sections = course.get('sections', [])
+            instructors_for_course = []
+            
+            # Get instructors for the course
+            for section in sections:
+                instructor_for_section = section.get('instructors', [])
+                if instructor_for_section not in instructors_for_course:
+                    instructors_for_course.append(instructor_for_section)
+            
+            # Get course equivalencies
+            course_equivalencies = await get_top_5_course_equivalencies_by_distance(course_code)
+            
+            matching_courses.append({
+                'instructors': instructors_for_course,
+                'title': course.get('title'),
+                'prerequisites': preq,
+                'equivalencies': course_equivalencies,
+                'course_number': course_string
+            })
+    
+    if not matching_courses:
+        return jsonify({'searchTerm': search_term, 'message': 'No courses found with that code.'})
+    
+    return jsonify({
+        'searchTerm': search_term,
+        'courses': matching_courses
     })
 
 if __name__ == '__main__':
