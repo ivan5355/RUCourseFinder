@@ -102,7 +102,6 @@ def generate_embeddings(text):
     )
     return np.array(response['data'][0]['embedding'])
 
-
 # Gets the course descriptions for the courses
 @app.route('/save_location', methods=['POST'])
 async def save_location():
