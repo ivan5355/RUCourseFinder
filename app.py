@@ -362,5 +362,47 @@ async def search_by_code():
         'courses': matching_courses
     })
 
+@app.route('/search_by_major', methods=['POST'])
+async def search_by_major():
+    data = await request.json
+    search_term = data.get('searchTerm', '').strip()
+    print(type(search_term))
+    
+    matching_courses = []
+    
+    # Search for courses with the major code
+    for full_code, course in courses_by_code.items():
+        course_string = course.get('courseString', '')
+
+        # Extract major code from courseString (e.g., "198:111" -> "198")
+        major_code = course_string.split(':')[1] if ':' in course_string else ''
+        
+        if major_code == search_term:
+            preq = course.get('preReqNotes') or "No prerequisites"
+            sections = course.get('sections', [])
+            instructors_for_course = []
+            
+            for section in sections:
+                instructor_for_section = section.get('instructors', [])
+                if instructor_for_section not in instructors_for_course:
+                    instructors_for_course.append(instructor_for_section)
+            
+            course_code = course_string.replace(':', '')
+            
+            matching_courses.append({
+                'instructors': instructors_for_course,
+                'title': course.get('title'),
+                'prerequisites': preq,
+                'course_number': course_string
+            })
+    
+    if not matching_courses:
+        return jsonify({'searchTerm': search_term, 'message': 'No courses found for this major code.'})
+    
+    return jsonify({
+        'searchTerm': search_term,
+        'courses': matching_courses
+    })
+
 if __name__ == '__main__':
     app.run(debug=True)

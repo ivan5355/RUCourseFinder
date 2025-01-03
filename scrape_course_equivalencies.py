@@ -7,7 +7,6 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
 
 # Initialize the browser
 driver = webdriver.Chrome()
@@ -16,9 +15,7 @@ community_colleges = ["Atlantic-Cape Community College", 'Bergen Community Colle
                       
 colleges = ["Rutgers Business School - New Brunswick", "Rutgers-Edward Bloustein Sch of Planning & Policy", "Rutgers-Ernest Mario School of Pharmacy", "Rutgers-Mason Gross School of Arts", "Rutgers-School of Arts and Sciences", "Rutgers-School of Engineering", "Rutgers-School of Env Biological Sciences", "Rutgers-School of Management and Labor Relations", "Rutgers-School of Nursing"]
 
-# Initialize the browser
-driver = webdriver.Chrome()
-
+# scrapes course equivalency data for a specific community college and Rutgers college pair.
 def get_classes(community_college, college):
     
     driver.get('https://njtransfer.org/artweb/chgri.cgi')
@@ -36,7 +33,6 @@ def get_classes(community_college, college):
       cookies_button.click()
     except:
       pass
-
 
     submit_button = driver.find_element(By.NAME, "SubChgRI")
     submit_button.click()
@@ -64,7 +60,6 @@ def get_classes(community_college, college):
         })
 
     return courses
-
 
 all_courses = []
 
