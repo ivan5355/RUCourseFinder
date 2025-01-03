@@ -8,6 +8,8 @@ import aiohttp
 import pandas as pd
 import openai
 from pinecone import Pinecone
+from pyvis.network import Network
+import re
 
 app = Quart(__name__, template_folder='templates')
 
@@ -51,6 +53,7 @@ community_colleges = {
 
 courses_by_title = {}
 courses_by_code = {} 
+courses_by_code_title = {}  # Dictionary to map course codes to titles
 
 # Maps the titles and codes of courses to course objects
 for course in courses_data:
@@ -63,6 +66,9 @@ for course in courses_data:
     # Map by full course code (removing colon)
     full_code = course_string.replace(':', '').strip()
     courses_by_code[full_code] = course
+    
+    # Map course code to title
+    courses_by_code_title[full_code] = title
 
 instructors_courses = {}
 
@@ -403,6 +409,68 @@ async def search_by_major():
         'searchTerm': search_term,
         'courses': matching_courses
     })
+
+@app.route('/generate_prereq_graph', methods=['POST'])
+async def generate_prereq_graph():
+    data = await request.json
+    courses = data.get('courses', [])
+    
+    # Create a new network
+    net = Network(height="500px", width="100%", bgcolor="#ffffff", font_color="black")
+    
+    # Track added nodes to avoid duplicates
+    added_nodes = set()
+    
+    def extract_course_codes(prereq_text):
+        # Pattern to match course codes like "198:111" or "01:198:111"
+        pattern = r'(?:\d{2}:)?(\d{3}:\d{3})'
+        return re.findall(pattern, prereq_text)
+    
+    # Add nodes and edges
+    for course in courses:
+        course_number = course['course_number']
+        title = course['title']
+        prereqs = course['prerequisites']
+        
+        # Add main course node if not already added
+        if course_number not in added_nodes:
+            net.add_node(course_number, 
+                        label=f"{course_number}\n{title}", 
+                        title=title,
+                        color="#cc0033")
+            added_nodes.add(course_number)
+        
+        # Extract and add prerequisite courses
+        prereq_courses = extract_course_codes(prereqs)
+        for prereq in prereq_courses:
+            if prereq not in added_nodes:
+                net.add_node(prereq, 
+                            label=prereq,
+                            color="#666666")
+                added_nodes.add(prereq)
+            net.add_edge(prereq, course_number, arrows='to')
+    
+    # Configure physics
+    net.set_options("""
+    var options = {
+        "physics": {
+            "forceAtlas2Based": {
+                "gravitationalConstant": -100,
+                "springLength": 200
+            },
+            "minVelocity": 0.75,
+            "solver": "forceAtlas2Based"
+        }
+    }
+    """)
+    
+    # Generate HTML
+    try:
+        graph_html = net.generate_html()
+        return jsonify({'graph_html': graph_html})
+    except Exception as e:
+        print(f"Error generating graph: {e}")
+        return jsonify({'error': 'Failed to generate graph'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

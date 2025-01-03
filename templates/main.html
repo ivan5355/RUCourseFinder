@@ -167,6 +167,30 @@
             border-color: #cc0033;
         }
        }
+
+       .visualize-btn {
+           background-color: #cc0033;
+           color: white;
+           padding: 10px 20px;
+           border: none;
+           border-radius: 4px;
+           cursor: pointer;
+           margin: 20px auto;
+           display: block;
+           font-size: 16px;
+           transition: all 0.3s ease;
+       }
+
+       .visualize-btn:hover {
+           background-color: #a50029;
+           transform: translateY(-1px);
+       }
+
+       #graph-container {
+           margin: 20px auto;
+           padding: 20px;
+           max-width: 1000px;
+       }
    </style>
 </head>
 
@@ -373,6 +397,22 @@
         coursesContainer.innerHTML = '';
 
         if (courses.length > 0) {
+            // Add visualization button only for major searches
+            if (currentSearchType === 'major') {
+                var visualizeButton = document.createElement('button');
+                visualizeButton.className = 'visualize-btn';
+                visualizeButton.innerHTML = '<i class="fas fa-project-diagram"></i> Visualize Course Prerequisites for Major';
+                visualizeButton.onclick = function() {
+                    visualizePrerequisites(courses);
+                };
+                coursesContainer.appendChild(visualizeButton);
+
+                // Add container for the graph
+                var graphContainer = document.createElement('div');
+                graphContainer.id = 'graph-container';
+                coursesContainer.appendChild(graphContainer);
+            }
+
             courses.forEach(function(course) {
                 var titleElement = document.createElement('p');
                 titleElement.textContent = course.course_number + " " + course.title;
@@ -465,6 +505,11 @@
             messageElement.textContent = 'No professors found.';
             coursesContainer.appendChild(messageElement);
         }
+    }
+
+    // Add the visualization function
+    async function visualizePrerequisites(courses) {
+        
     }
     </script>
     
