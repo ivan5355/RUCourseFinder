@@ -16,6 +16,7 @@
            background-color: #f4f4f4;
            color: #333;
        }
+
        .container {
            max-width: 1200px;
            margin: 0 auto;
@@ -45,9 +46,11 @@
            align-items: center;
            margin: 40px 0;
        }
-       
 
-     
+       .toggle-container {
+           margin-right: 10px;
+       }
+
        #search-bar {
            width: 400px;
            padding: 12px;
@@ -137,35 +140,10 @@
                margin-top: 10px;
            }
 
-            .toggle-container {
-                display: flex;
-                justify-content: space-around;
-                align-items: center;
-                padding: 0 20px;
-                gap: 15px;
-        }
-
-        .toggle-container label {
-            display: flex;
-            align-items: center;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
-            width: 25%; /* This ensures each label takes up 25% of the container width */
-            justify-content: center; /* Centers the content within the label */
-        }
-
-        .toggle-container input[type="radio"] {
-            margin-right: 8px;
-        }
-
-        .toggle-container input[type="radio"]:checked + label {
-            background-color: #cc0033;
-            color: white;
-            border-color: #cc0033;
-        }
+           .toggle-container {
+               margin-right: 0;
+               margin-bottom: 10px;
+           }
        }
 
        .visualize-btn {
@@ -214,13 +192,10 @@
                         <input type="radio" name="search-option" id="toggle-course-title" class="toggle-radio" checked> Search by Course Title
                     </label>
                     <label for="toggle-professor">
-                        <input type="radio" name="search-option" id="toggle-professor" class="toggle-radio"> Search by Professor
+                        <input type="radio" name="search-option" id="toggle-professor" class="toggle-radio"> Search Courses by Professor
                     </label>
                     <label for="toggle-course-code">
                         <input type="radio" name="search-option" id="toggle-course-code" class="toggle-radio"> Search by Course Code
-                    </label>
-                    <label for="toggle-course-major">
-                        <input type="radio" name="search-option" id="toggle-course-major" class="toggle-radio"> Search by Major
                     </label>
                 </div>
             </div>
@@ -262,11 +237,6 @@
         document.getElementById('toggle-course-code').addEventListener('change', function() {
             currentSearchType = 'code';
             document.getElementById('search-bar').placeholder = "Enter last 3 digits of course code (e.g., 101)";
-        });
-
-        document.getElementById('toggle-course-major').addEventListener('change', function() {
-            currentSearchType = 'major';
-            document.getElementById('search-bar').placeholder = "Enter major code (e.g., 198 for CS, 640 for Math)";
         });
 
         // Get user's location when the page loads  
@@ -360,9 +330,6 @@
             case 'code':
                 endpoint = '/search_by_code';
                 break;
-            case 'major':
-                endpoint = '/search_by_major';
-                break;
             default:
                 endpoint = '/search_by_title';
         }
@@ -376,7 +343,7 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (currentSearchType === 'title' || currentSearchType === 'code' || currentSearchType === 'major') {
+            if (currentSearchType === 'title' || currentSearchType === 'code') {
                 displayCourses(data.courses || []);
             } else {
                 displayProfessorResults(data.results || []);

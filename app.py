@@ -14,7 +14,7 @@ import re
 app = Quart(__name__, template_folder='templates')
 
 # Loads the Rutgers courses from the JSON file
-with open('rutgers_courses.json', 'r') as json_file:
+with open('data/rutgers_courses.json', 'r') as json_file:
     courses_data = json.load(json_file)
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -162,7 +162,7 @@ async def get_distance(your_location, community_college_location):
 # Gets the top 5 course equivalencies by distance
 async def get_top_5_course_equivalencies_by_distance(course_code):
 
-    equivalencies = pd.read_csv('community_to_college.csv')
+    equivalencies = pd.read_csv('data/community_to_college.csv')
 
     # Filters the equivalencies by the course code
     equivalencies = equivalencies[equivalencies['equivalency'] == course_code]
@@ -367,110 +367,6 @@ async def search_by_code():
         'searchTerm': search_term,
         'courses': matching_courses
     })
-
-@app.route('/search_by_major', methods=['POST'])
-async def search_by_major():
-    data = await request.json
-    search_term = data.get('searchTerm', '').strip()
-    print(type(search_term))
-    
-    matching_courses = []
-    
-    # Search for courses with the major code
-    for full_code, course in courses_by_code.items():
-        course_string = course.get('courseString', '')
-
-        # Extract major code from courseString (e.g., "198:111" -> "198")
-        major_code = course_string.split(':')[1] if ':' in course_string else ''
-        
-        if major_code == search_term:
-            preq = course.get('preReqNotes') or "No prerequisites"
-            sections = course.get('sections', [])
-            instructors_for_course = []
-            
-            for section in sections:
-                instructor_for_section = section.get('instructors', [])
-                if instructor_for_section not in instructors_for_course:
-                    instructors_for_course.append(instructor_for_section)
-            
-            course_code = course_string.replace(':', '')
-            
-            matching_courses.append({
-                'instructors': instructors_for_course,
-                'title': course.get('title'),
-                'prerequisites': preq,
-                'course_number': course_string
-            })
-    
-    if not matching_courses:
-        return jsonify({'searchTerm': search_term, 'message': 'No courses found for this major code.'})
-    
-    return jsonify({
-        'searchTerm': search_term,
-        'courses': matching_courses
-    })
-
-@app.route('/generate_prereq_graph', methods=['POST'])
-async def generate_prereq_graph():
-    data = await request.json
-    courses = data.get('courses', [])
-    
-    # Create a new network
-    net = Network(height="500px", width="100%", bgcolor="#ffffff", font_color="black")
-    
-    # Track added nodes to avoid duplicates
-    added_nodes = set()
-    
-    def extract_course_codes(prereq_text):
-        # Pattern to match course codes like "198:111" or "01:198:111"
-        pattern = r'(?:\d{2}:)?(\d{3}:\d{3})'
-        return re.findall(pattern, prereq_text)
-    
-    # Add nodes and edges
-    for course in courses:
-        course_number = course['course_number']
-        title = course['title']
-        prereqs = course['prerequisites']
-        
-        # Add main course node if not already added
-        if course_number not in added_nodes:
-            net.add_node(course_number, 
-                        label=f"{course_number}\n{title}", 
-                        title=title,
-                        color="#cc0033")
-            added_nodes.add(course_number)
-        
-        # Extract and add prerequisite courses
-        prereq_courses = extract_course_codes(prereqs)
-        for prereq in prereq_courses:
-            if prereq not in added_nodes:
-                net.add_node(prereq, 
-                            label=prereq,
-                            color="#666666")
-                added_nodes.add(prereq)
-            net.add_edge(prereq, course_number, arrows='to')
-    
-    # Configure physics
-    net.set_options("""
-    var options = {
-        "physics": {
-            "forceAtlas2Based": {
-                "gravitationalConstant": -100,
-                "springLength": 200
-            },
-            "minVelocity": 0.75,
-            "solver": "forceAtlas2Based"
-        }
-    }
-    """)
-    
-    # Generate HTML
-    try:
-        graph_html = net.generate_html()
-        return jsonify({'graph_html': graph_html})
-    except Exception as e:
-        print(f"Error generating graph: {e}")
-        return jsonify({'error': 'Failed to generate graph'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
