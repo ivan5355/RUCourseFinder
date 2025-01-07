@@ -4,7 +4,7 @@ import openai
 import numpy as np
 from tqdm import tqdm
 import dotenv
-from pinecone import Pinecone, ServerlessSpec
+from pinecone import Pinecone
 
 # Load environment variables (API keys, etc.)
 dotenv.load_dotenv()
