@@ -230,7 +230,7 @@ async def search():
     search_term = data.get('searchTerm')
 
     # Finds the top 10 closest matches based on the course_titles. Stored as list of strings
-    close_matches = search_courses(search_term, top_k=10)
+    close_matches = search_courses(search_term, top_k = 6)
     print(f"Close matches: {close_matches}")
        
     matching_courses = []
