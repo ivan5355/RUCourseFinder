@@ -324,7 +324,7 @@
         resultsContainer.innerHTML = '';
     }
 
-    //search by title
+    //search function with caching
     function search() {
         var searchTerm = document.getElementById('search-bar').value;
         var loadingElement = document.querySelector('.loading');
@@ -333,6 +333,18 @@
         // Show loading spinner
         loadingElement.style.display = 'block';
         resultsContainer.innerHTML = '';
+
+        // Unique key for each search type
+        const cacheKey = `${currentSearchType}:${searchTerm}`; 
+
+        const cachedResults = localStorage.getItem(cacheKey);
+
+         // Check local storage for cached results
+        if (cachedResults) {
+            displayCourses(JSON.parse(cachedResults));
+            loadingElement.style.display = 'none'; 
+            return; 
+        }
 
         // Determine which endpoint to use based on search type
         let endpoint;
@@ -361,6 +373,9 @@
         .then(data => {
             if (currentSearchType === 'title' || currentSearchType === 'code') {
                 displayCourses(data.courses || []);
+                
+                // Cache the results in local storage
+                localStorage.setItem(cacheKey, JSON.stringify(data.courses || []));
             } else {
                 displayProfessorResults(data.results || []);
             }
