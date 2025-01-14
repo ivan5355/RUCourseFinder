@@ -191,7 +191,7 @@
                 <div class="container">
                     <div class="container">
                         <h3>
-                            An enhanced Rutgers course search experience. Unlike WebReg, this platform allows you to search courses by title (leveraging vector embeddings for semantic search), professor, and course code, while also finding equivalent Rutgers courses from New Jersey community colleges with ease.
+                            Unlike WebReg, this platform allows you to search courses by title (leveraging vector embeddings for semantic search), professor, and course code, while also finding equivalent Rutgers courses from New Jersey's community colleges with ease.
                         </h3>
                         <p><strong>Disclaimer:</strong> This platform is not affiliated with Rutgers University.</p>
                     </div>
@@ -424,6 +424,7 @@
                     for (var i = 0; i < course.instructors.length; i++) {
                         var professor = course.instructors[i][0];
                         professorsElement.textContent += professor.name;
+                        console.log(professor.name);
 
                         if (i < course.instructors.length - 1) {
                             professorsElement.textContent += ', ';

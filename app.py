@@ -230,7 +230,7 @@ async def search():
     search_term = data.get('searchTerm')
 
     # Finds the top 10 closest matches based on the course_titles. Stored as list of strings
-    close_matches = search_courses(search_term, top_k = 6)
+    close_matches = search_courses(search_term, top_k = 5)
     print(f"Close matches: {close_matches}")
        
     matching_courses = []
@@ -253,19 +253,24 @@ async def search():
     for course in matching_courses:
         course_string = course.get("courseString")
         course_title = course.get('title')
-        preq = course.get('preReqNotes')
-
-        if preq is None:
-            preq = "No prerequisites"
+        preq = course.get('preReqNotes') or "No prerequisites"
 
         sections = course.get('sections', [])
         instructors_for_course = []
+        print(course_title)
 
         # Loops through each section to extract the instructors
         for section in sections:
+            print(section.get('instructors', []))
             instructor_for_section = section.get('instructors', [])
+
+            if not instructor_for_section:
+                instructor_for_section = [{'name': 'UNKNOWN'}]
+
             if instructor_for_section not in instructors_for_course:
                 instructors_for_course.append(instructor_for_section)
+            
+    
 
         print(course['title'], instructors_for_course)
 
@@ -346,8 +351,15 @@ async def search_by_code():
             # Get instructors for the course
             for section in sections:
                 instructor_for_section = section.get('instructors', [])
+
+                if not instructor_for_section:
+                    instructor_for_section = [{'name': 'UNKNOWN'}]
+                    
                 if instructor_for_section not in instructors_for_course:
                     instructors_for_course.append(instructor_for_section)
+
+            if not instructors_for_course:
+                instructors_for_course.append("Unknown")
             
             # Get course equivalencies
             course_equivalencies = await get_top_5_course_equivalencies_by_distance(course_code)

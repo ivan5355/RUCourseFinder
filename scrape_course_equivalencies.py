@@ -84,6 +84,6 @@ df.to_csv('community_to_college.csv', index=False)
 
 driver.quit()
 
-equivalencies = pd.read_csv('data/community_to_college.csv')
+
 
 
