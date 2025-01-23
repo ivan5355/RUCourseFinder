@@ -248,4 +248,86 @@ class course_search:
 
             return top_5
 
+
+        def search_by_title(self, title):
+            """
+            Search for courses by title.
+
+            Args:
+                title (str): Title of the course to search for
+
+            Returns:
+                list: List of course objects that match the title
+            """
+            # Finds the top 10 closest matches based on the course_titles. Stored as list of strings
+            close_matches = search_courses(search_term, top_k = 5)
+            print(f"Close matches: {close_matches}")
+            
+            matching_courses = []
+            course_titles = []
+
+            # Loops through matches and adds course objects to matching_course that have a matching title
+            for match in close_matches:
+
+                matching_course = courses_by_title.get(match.lower())
+            
+                matching_courses.append(matching_course)
+                course_titles.append(match)
+
+            if not matching_courses:
+                return jsonify({'searchTerm': search_term, 'message': 'No search results found.'})
+            
+            results = []
+
+            return results
+
+        def search_by_code(self, code):
+            """
+            Search for courses by code.
+
+            Args:
+                code (str): Course code to search for
+
+            Returns:
+                list: List of course objects that match the code
+            """
+            matching_courses = []
+
+            # Search through the course:sections dictionary to get the sections for a course
+            for course_code, sections in self.courses_by_code.items():
+                if course_code.endswith(code):
+                    matching_courses.append(self.courses_by_code[course_code])
+
+            return matching_courses
+
+        def search_by_professor(self, professor):
+            """
+            Search for courses by professor.
+
+            Args:
+                professor (str): Name of the professor to search for
+
+            Returns:
+                list: List of course objects that match the professor
+            """
+            matching_courses = []
+            matching_professors = []
+
+            # Search through the instructor:courses dictionary to get the courses taught by a professor
+            for professor in instructors_courses.keys():
+                if search_term in professor.lower():
+                    matching_professors.append(professor)
+            
+            results = []
+
+            # Store the professor and their courses in a list of dictionaries 
+            for professor in matching_professors:
+                courses = self.instructors_courses[professor]
+                results.append({
+                    'professor': professor,
+                    'courses': courses
+                })
+            
+            return results
+
     
