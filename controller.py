@@ -316,9 +316,9 @@ class course_search:
         matching_professors = []
 
         # Search through the instructor:courses dictionary to get the courses taught by a professor
-        for professor in self.instructors_courses.keys():
-            if professor.lower() in professor.lower():
-                matching_professors.append(professor)
+        for instructor in self.instructors_courses.keys():
+            if professor.lower() in instructor.lower():
+                matching_professors.append(instructor)
         
         results = []
 
@@ -389,25 +389,23 @@ async def main():
     # Initialize the course_search controller with the path to your course data JSON
     course_search_controller = course_search(courses_data_path='data/rutgers_courses.json')
 
-    # Test search by title
-    title = "Introduction to Computer Science"
-    print("Searching by Title:", title)
-    matching_courses = await course_search_controller.search_by_title(title)
-    print(matching_courses)
+    # Test search courses by title
+    # title = "Introduction to Computer Science"
+    # print("Searching by Title:", title)
+    # matching_courses = await course_search_controller.search_by_title(title)
+    # print(matching_courses)
     
-    # Test search by code
+    # Test search courses by code
     # code = "112"
     # print("Searching by Code:", code)
     # matching_courses = await course_search_controller.search_by_code(code)
     # print(matching_courses)
 
-    # Test search by professor
-    # professor = "Centeno"
-    # print("Searching by Professor:", professor)
-    # courses = course_search_controller.search_by_professor(professor)
-    # for course in courses:
-    #     print(f"Course Code: {course.get('courseString', '')}")
-    #     print(f"Title: {course.get('title', '')}\n")
+    # Test search  courses by professor
+    professor = "Centeno"
+    print("Searching by Professor:", professor)
+    professor_courses = course_search_controller.search_by_professor(professor)
+    print(professor_courses)
 
     
 # Run the async main function
