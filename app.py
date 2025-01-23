@@ -56,13 +56,15 @@ community_colleges = {
 
 courses_by_title = {}
 courses_by_code = {} 
-courses_by_code_title = {}  # Dictionary to map course codes to titles
+courses_by_code_title = {}  
+instructors_courses = {}
 
-# Maps the titles and codes of courses to course objects
+#Maps the instructor to their courses
 for course in courses_data:
+
     title = course.get('title').lower()
     course_string = course.get('courseString', '')
-    
+
     # Map by title
     courses_by_title[title] = course
     
@@ -73,13 +75,6 @@ for course in courses_data:
     # Map course code to title
     courses_by_code_title[full_code] = title
 
-instructors_courses = {}
-
-#Maps the instructor to their courses
-for course in courses_data:
-
-    title = course.get('title')
-    course_string = course.get('courseString')
     
     sections = course.get('sections', [])
 
