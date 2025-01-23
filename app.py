@@ -10,6 +10,9 @@ import openai
 from pinecone import Pinecone
 from pyvis.network import Network
 import re
+import dotenv
+
+dotenv.load_dotenv()
 
 app = Quart(__name__, template_folder='templates')
 
