@@ -242,6 +242,8 @@ async def search():
         matching_courses.append(matching_course)
         course_titles.append(match)
 
+    
+
     if not matching_courses:
         return jsonify({'searchTerm': search_term, 'message': 'No search results found.'})
     
@@ -269,7 +271,6 @@ async def search():
                 instructors_for_course.append(instructor_for_section)
             
     
-
         print(course['title'], instructors_for_course)
 
         course_code = course_string.replace(':', '')
@@ -289,6 +290,7 @@ async def search():
         'searchTerm': search_term,
         'courses': results
     }
+    
     return jsonify(response_data)
 
 #Search by professor

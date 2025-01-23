@@ -79,7 +79,7 @@ class course_search:
 
         self.build_course_mappings()
 
-    def _build_course_mappings(self):
+    def build_course_mappings(self):
         """
         Build internal mappings for courses, titles, and instructors.
 
@@ -117,217 +117,300 @@ class course_search:
                     if course_info not in self.instructors_courses[instructor_name]:
                         self.instructors_courses[instructor_name].append(course_info)
 
-        def generate_embeddings(self, text):
-            """
-            Generate embeddings for a given text.
 
-            Args:
-                text (str): The text to generate embeddings for.
+    def generate_embeddings(self, text):
+        """
+        Generate embeddings for a given text.
 
-            Returns:
-                numpy.ndarray: The generated embeddings.
-            """
-            response = openai.Embedding.create(
-                input=text,
-                model="text-embedding-ada-002"
+        Args:
+            text (str): The text to generate embeddings for.
+
+        Returns:
+            numpy.ndarray: The generated embeddings.
+        """
+        response = openai.Embedding.create(
+            input=text,
+            model="text-embedding-ada-002"
+        )
+        return np.array(response['data'][0]['embedding'])
+
+    def search_courses(self, query, top_k):
+        """
+        Search for courses based on a given text user inputs
+
+        Args:
+            text (str): The text to search for.
+
+        Returns:
+            list: top 10 courses matching the search query.
+        """
+        # Generate the embedding for the search query
+        query_embedding = self.generate_embeddings(query)
+
+        # Perform the search in Pinecone
+        result = self.index.query(
+            vector=query_embedding.tolist(),  
+            top_k=top_k,
+            include_metadata=True
+        )
+
+        if not result['matches']:
+            print(f"No matches found for query: {query}")
+        else:
+            print(f"Found {len(result['matches'])} matches for query: {query}")
+            for match in result['matches']:
+                print(f"Course ID: {match['id']}, Score: {match['score']}")
+
+        # Extract the course titles from the search results
+        course_titles = [match['id'] for match in result['matches']]
+
+        return course_titles
+
+    your_location = None
+
+    # Gets the distance between the user's location and the community college
+    async def get_distance(your_location, community_college_location):
+        """
+        Calculate the driving distance between two locations using the Mapbox Directions API.
+
+        Args:
+            your_location (tuple): A tuple containing the latitude and longitude of the user's location.
+            community_college_location (tuple): A tuple containing the latitude and longitude of the community college location.
+
+        Returns:
+            float: The driving distance between the two locations in miles.
+        """
+        
+        if your_location is None or community_college_location is None:
+            return float('inf')
+
+        # Mapbox API URL for Directions
+        base_url = "https://api.mapbox.com/directions/v5/mapbox/driving"
+        
+        # Coordinates as Longitude, Latitude format
+        start = f"{your_location[1]},{your_location[0]}"  
+        end = f"{community_college_location[1]},{community_college_location[0]}"  
+        
+        access_token = os.getenv("MAPBOX_ACCESS_TOKEN")
+
+        url = f"{base_url}/{start};{end}?access_token={access_token}&geometries=geojson&overview=simplified&annotations=distance"
+        
+        # Asynchronously make the request
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+
+                    data = await response.json()
+
+                    # Get the distance in meters
+                    distance_in_meters = data['routes'][0]['legs'][0]['distance']
+
+                    # Convert meters to miles (1 mile = 1609.34 meters)
+                    distance_in_miles = round((distance_in_meters / 1609.34), 2)
+
+                    return distance_in_miles
+
+    your_location = None
+
+    async def get_top_5_course_equivalencies_by_distance(self, course_code, your_location):
+        """
+        Find top 5 course equivalencies sorted by distance from user's location.
+
+        Args:
+            course_code (str): Course code to find equivalencies for
+            your_location (tuple): User's current location (latitude, longitude)
+
+        Returns:
+            list: Top 5 course equivalencies with distance information
+        """
+        equivalencies = pd.read_csv('data/community_to_college.csv')
+        equivalencies = equivalencies[equivalencies['equivalency'] == course_code]
+
+        if equivalencies.empty:
+            return []
+
+        distance_tasks = []
+        for college in equivalencies['community_college']:
+            distance_tasks.append(
+                self.get_distance(your_location, self.community_colleges.get(college))
             )
-            return np.array(response['data'][0]['embedding'])
-
-        def search_courses(self, text):
-            """
-            Search for courses based on a given text user inputs
-
-            Args:
-                text (str): The text to search for.
-
-            Returns:
-                list: top 10 courses matching the search query.
-            """
-            # Generate the embedding for the search query
-            query_embedding = self.generate_embeddings(query)
-
-            # Perform the search in Pinecone
-            result = self.index.query(
-                vector=query_embedding.tolist(),  
-                top_k=top_k,
-                include_metadata=True
-            )
-
-            if not result['matches']:
-                print(f"No matches found for query: {query}")
-            else:
-                print(f"Found {len(result['matches'])} matches for query: {query}")
-                for match in result['matches']:
-                    print(f"Course ID: {match['id']}, Score: {match['score']}")
-
-            # Extract the course titles from the search results
-            course_titles = [match['id'] for match in result['matches']]
-
-            return course_titles
-
-        your_location = None
-
-        # Gets the distance between the user's location and the community college
-        async def get_distance(your_location, community_college_location):
-            """
-            Calculate the driving distance between two locations using the Mapbox Directions API.
-
-            Args:
-                your_location (tuple): A tuple containing the latitude and longitude of the user's location.
-                community_college_location (tuple): A tuple containing the latitude and longitude of the community college location.
-
-            Returns:
-                float: The driving distance between the two locations in miles.
-            """
+        
+        distances = await asyncio.gather(*distance_tasks)
+        equivalencies['Distance'] = distances
+        
+        unique_colleges = set()
+        top_5 = []
+        
+        for _, row in equivalencies.sort_values('Distance').iterrows():
+            college = row['community_college']
+            if college not in unique_colleges:
+                unique_colleges.add(college)
+                top_5.append(row.to_dict())
             
-            if your_location is None or community_college_location is None:
-                return float('inf')
+                if len(top_5) == 5:
+                    break
 
-            # Mapbox API URL for Directions
-            base_url = "https://api.mapbox.com/directions/v5/mapbox/driving"
-            
-            # Coordinates as Longitude, Latitude format
-            start = f"{your_location[1]},{your_location[0]}"  
-            end = f"{community_college_location[1]},{community_college_location[0]}"  
-            
-            access_token = os.getenv("MAPBOX_ACCESS_TOKEN")
+        return top_5
 
-            url = f"{base_url}/{start};{end}?access_token={access_token}&geometries=geojson&overview=simplified&annotations=distance"
-            
-            # Asynchronously make the request
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
 
-                        data = await response.json()
+    async def search_by_title(self, title):
+        """
+        Search for courses by title.
 
-                        # Get the distance in meters
-                        distance_in_meters = data['routes'][0]['legs'][0]['distance']
+        Args:
+            title (str): Title of the course to search for
 
-                        # Convert meters to miles (1 mile = 1609.34 meters)
-                        distance_in_miles = round((distance_in_meters / 1609.34), 2)
+        Returns:
+            list: List of course objects that match the title
+        """
+        
+        # Finds the top 10 closest matches based on the course_titles. Stored as list of strings
+        close_matches = self.search_courses(title, top_k = 5)
+        print(f"Close matches: {close_matches}")
+        
+        matching_courses = []
+        course_titles = []
 
-                        return distance_in_miles
+        # Loops through matches and adds course objects to matching_course that have a matching title
+        for match in close_matches:
 
-        async def get_top_5_course_equivalencies_by_distance(self, course_code, your_location):
-            """
-            Find top 5 course equivalencies sorted by distance from user's location.
+            matching_course = self.courses_by_title.get(match.lower())
+            course_info = await self.extract_course_data(matching_course)
+            matching_courses.append(course_info)
+            course_titles.append(match)
+          
+           
+        return matching_courses
 
-            Args:
-                course_code (str): Course code to find equivalencies for
-                your_location (tuple): User's current location (latitude, longitude)
+    async def search_by_code(self, course_code):
+        """
+        Search for courses by code.
 
-            Returns:
-                list: Top 5 course equivalencies with distance information
-            """
-            equivalencies = pd.read_csv('data/community_to_college.csv')
-            equivalencies = equivalencies[equivalencies['equivalency'] == course_code]
+        Args:
+            code (str): Course code to search for
 
-            if equivalencies.empty:
-                return []
+        Returns:
+            list: List of course objects that match the code
+        """
+        matching_courses = []
 
-            distance_tasks = []
-            for college in equivalencies['community_college']:
-                distance_tasks.append(
-                    self.get_distance(your_location, self.community_colleges.get(college))
-                )
-            
-            distances = await asyncio.gather(*distance_tasks)
-            equivalencies['Distance'] = distances
-            
-            unique_colleges = set()
-            top_5 = []
-            
-            for _, row in equivalencies.sort_values('Distance').iterrows():
-                college = row['community_college']
-                if college not in unique_colleges:
-                    unique_colleges.add(college)
-                    top_5.append(row.to_dict())
+        # Search through the course:sections dictionary to get the sections for a course
+        for full_code, course in self.courses_by_code.items():
+            if full_code.endswith(course_code):
+                course_info = await self.extract_course_data(course)
+                matching_courses.append(course_info)
+
+        return matching_courses
                 
-                    if len(top_5) == 5:
-                        break
+                
 
-            return top_5
+    def search_by_professor(self, professor):
+        """
+        Search for courses by professor.
 
+        Args:
+            professor (str): Name of the professor to search for
 
-        def search_by_title(self, title):
-            """
-            Search for courses by title.
+        Returns:
+            list: List of course objects that match the professor
+        """
+        matching_professors = []
 
-            Args:
-                title (str): Title of the course to search for
+        # Search through the instructor:courses dictionary to get the courses taught by a professor
+        for professor in self.instructors_courses.keys():
+            if professor.lower() in professor.lower():
+                matching_professors.append(professor)
+        
+        results = []
 
-            Returns:
-                list: List of course objects that match the title
-            """
-            # Finds the top 10 closest matches based on the course_titles. Stored as list of strings
-            close_matches = search_courses(search_term, top_k = 5)
-            print(f"Close matches: {close_matches}")
-            
-            matching_courses = []
-            course_titles = []
+        # Store the professor and their course titles in a list of dictionaries 
+        for professor in matching_professors:
+            courses = self.instructors_courses[professor]
+            results.append({
+                'professor': professor,
+                'courses': courses
+            })
+        
+        return results
 
-            # Loops through matches and adds course objects to matching_course that have a matching title
-            for match in close_matches:
+    async def extract_course_data(self, course):
+        """
+        Extract course data from a course object.
 
-                matching_course = courses_by_title.get(match.lower())
-            
-                matching_courses.append(matching_course)
-                course_titles.append(match)
+        Args:
+           matching_courses (list): List of course objects to extract data from
 
-            if not matching_courses:
-                return jsonify({'searchTerm': search_term, 'message': 'No search results found.'})
-            
-            results = []
+        Returns:
+            dict: Extracted course data that contains the course number, title, prerequisites, and instructors
+        """
 
-            return results
+        course_string = course.get('courseString')
+        course_title = course.get('title')
+        preq = course.get('preReqNotes') or "No prerequisites"
 
-        def search_by_code(self, code):
-            """
-            Search for courses by code.
+        sections = course.get('sections', [])
+        instructors_for_course = []
+        print(course_title)
+        print(course_string)
 
-            Args:
-                code (str): Course code to search for
+        # Loops through each section to extract the instructors
+        for section in sections:
+            print(section.get('instructors', []))
+            instructor_for_section = section.get('instructors', [])
 
-            Returns:
-                list: List of course objects that match the code
-            """
-            matching_courses = []
+            if not instructor_for_section:
+                instructor_for_section = [{'name': 'UNKNOWN'}]
 
-            # Search through the course:sections dictionary to get the sections for a course
-            for course_code, sections in self.courses_by_code.items():
-                if course_code.endswith(code):
-                    matching_courses.append(self.courses_by_code[course_code])
+            if instructor_for_section not in instructors_for_course:
+                instructors_for_course.append(instructor_for_section)
 
-            return matching_courses
+        course_code = course_string.replace(':', '')
 
-        def search_by_professor(self, professor):
-            """
-            Search for courses by professor.
+         # Only calculate equivalencies if location is provided
+        course_equivalencies = []
+        your_location = None
+        if your_location:
+            course_equivalencies = await self.get_top_5_course_equivalencies_by_distance(course_code, your_location)
+        else:
+            print("No location provided. Skipping course equivalencies.")
 
-            Args:
-                professor (str): Name of the professor to search for
+        course_data = {
+            'title': course_title,
+            'course_number': course_string,
+            'instructors': instructors_for_course,
+            'prerequisites': preq,
+            'equivalencies': course_equivalencies,
+        }
 
-            Returns:
-                list: List of course objects that match the professor
-            """
-            matching_courses = []
-            matching_professors = []
+        return course_data
 
-            # Search through the instructor:courses dictionary to get the courses taught by a professor
-            for professor in instructors_courses.keys():
-                if search_term in professor.lower():
-                    matching_professors.append(professor)
-            
-            results = []
+# Main function to test searching by title, code, and professor. 
+async def main():
 
-            # Store the professor and their courses in a list of dictionaries 
-            for professor in matching_professors:
-                courses = self.instructors_courses[professor]
-                results.append({
-                    'professor': professor,
-                    'courses': courses
-                })
-            
-            return results
+    # Initialize the course_search controller with the path to your course data JSON
+    course_search_controller = course_search(courses_data_path='data/rutgers_courses.json')
+
+    # Test search by title
+    title = "Introduction to Computer Science"
+    print("Searching by Title:", title)
+    matching_courses = await course_search_controller.search_by_title(title)
+    print(matching_courses)
+    
+    # Test search by code
+    # code = "112"
+    # print("Searching by Code:", code)
+    # matching_courses = await course_search_controller.search_by_code(code)
+    # print(matching_courses)
+
+    # Test search by professor
+    # professor = "Centeno"
+    # print("Searching by Professor:", professor)
+    # courses = course_search_controller.search_by_professor(professor)
+    # for course in courses:
+    #     print(f"Course Code: {course.get('courseString', '')}")
+    #     print(f"Title: {course.get('title', '')}\n")
 
     
+# Run the async main function
+asyncio.run(main())
+
+   
