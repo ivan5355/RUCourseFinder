@@ -121,5 +121,43 @@ async def search_by_code():
             'message': f'An error occurred: {str(e)}'
         }), 500
 
+@app.route('/search_by_professor', methods=['POST'])
+async def search_by_professor():
+    """
+    Handles search requests for courses by professor name.
+
+    Expects a POST request with JSON payload containing 'searchTerm' for professor name.
+    Returns a list of professors and their courses that match the search term.
+
+    Returns:
+        JSON response containing matching professors and their courses
+    """
+    try:
+        data = await request.json
+        search_term = data.get('searchTerm')
+        
+        if not search_term:
+            return jsonify({'status': 'error', 'message': 'Professor name is required'})
+
+        results = courses_controller.search_by_professor(search_term)
+
+        if not results:
+            return jsonify({
+                'status': 'success',
+                'message': 'No results found',
+                'results': []
+            })
+        
+        return jsonify({
+            'searchTerm': search_term,
+            'results': results
+         })
+    
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'An error occurred: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
