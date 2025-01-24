@@ -1,7 +1,7 @@
 from quart import Quart, render_template, request, jsonify
 from controller import course_search
 
-app = Quart(__name__)
+app = Quart(__name__, template_folder='templates')
 courses_controller = course_search(courses_data_path='data/rutgers_courses.json')
 
 your_location = None
@@ -34,19 +34,40 @@ async def save_location():
 
 @app.route('/search_by_title', methods=['POST'])
 async def search_by_title():
-   
-    data = await request.json
-    search_term = data.get('searchTerm')
+    try:
+        data = await request.json
+        search_term = data.get('searchTerm')
+        
+        # Input validation
+        if not search_term:
+            return jsonify({'status': 'error', 'message': 'Search term is required'})
+        
+        if not your_location:
+            return jsonify({'status': 'error', 'message': 'Location not set'})
 
-    results = await courses_controller.search_by_title(search_term)
+        # Gets the top courses, along with their course info(title, course_string, instructors, prerequisites, equivalencies)
+        # that most closely macthes the title the user search
+        results = await courses_controller.search_by_title(search_term, your_location)
 
-    if not results:
-        return jsonify({'searchTerm': search_term, 'message': 'No search results found.'})
+        if not results:
+            return jsonify({
+                'status': 'success',
+                'message': 'No results found',
+                'results': []
+            })
+        
+        return jsonify({
+            'status': 'success',
+            'searchTerm': search_term,
+            'results': results
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'An error occurred: {str(e)}'
+        }), 500
 
-    return jsonify({
-        'searchTerm': search_term,
-        'results': results
-    })
 
 if __name__ == '__main__':
     app.run(debug=True)
