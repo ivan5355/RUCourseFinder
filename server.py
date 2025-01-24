@@ -78,6 +78,48 @@ async def search_by_title():
             'message': f'An error occurred: {str(e)}'
         }), 500
 
+@app.route('/search_by_code', methods=['POST'])
+async def search_by_code():
+    """
+    Handles search requests for courses by last 3 digits of course code.
+
+    Expects a POST request with JSON payload containing last 3 digits of course code'.
+    Uses the user's saved location to find nearby course equivalencies.
+
+    Returns:
+        JSON response with matching courses and their details
+    """
+    try:
+        data = await request.json
+        search_term = data.get('searchTerm', '')
+        
+        if not search_term:
+            return jsonify({'status': 'error', 'message': 'Course code is required'})
+        
+        if not your_location:
+            return jsonify({'status': 'error', 'message': 'Location not set'})
+
+        # returns all courses and their course info that ends with the 3 digits the user specifies 
+        results = await courses_controller.search_by_code(search_term, your_location)
+
+        if not results:
+            return jsonify({
+                'status': 'success',
+                'message': 'No results found',
+                'courses': []
+            })
+        
+        return jsonify({
+            'status': 'success',
+            'courseCode': search_term,
+            'courses': results
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'An error occurred: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
