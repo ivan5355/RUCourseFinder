@@ -7,7 +7,6 @@ import pandas as pd
 import openai
 from pinecone import Pinecone
 import re
-import dotenv 
 from dotenv import load_dotenv
 
 
@@ -49,7 +48,7 @@ class course_search:
         with open(courses_data_path, 'r') as json_file:
             self.courses_data = json.load(json_file)
 
-        community_colleges = {
+        self.community_colleges = {
             "Rowan College of South Jersey - Cumberland Campus": (39.4794, -75.0289),
             "Atlantic Cape Community College": (39.4572, -74.7229),
             "Bergen Community College": (40.9367, -74.0739),
@@ -402,10 +401,10 @@ async def main():
     # print(matching_courses)
 
     # Test search  courses by professor
-    professor = "Centeno"
-    print("Searching by Professor:", professor)
-    professor_courses = course_search_controller.search_by_professor(professor)
-    print(professor_courses)
+    # professor = "Centeno"
+    # print("Searching by Professor:", professor)
+    # professor_courses = course_search_controller.search_by_professor(professor)
+    # print(professor_courses)
 
     
 # Run the async main function
