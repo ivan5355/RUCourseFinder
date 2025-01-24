@@ -34,6 +34,16 @@ async def save_location():
 
 @app.route('/search_by_title', methods=['POST'])
 async def search_by_title():
+    """
+    Handles search requests for courses by title.
+
+    This function processes a POST request containing a JSON payload with a 'searchTerm' field.
+    It validates the request, checks if a location is set, and then calls the courses_controller
+    to search for courses by title. The results are then returned as a JSON response.
+
+    Returns:
+        JSON response containing the search status, search term, and a list of course results.
+    """
     try:
         data = await request.json
         search_term = data.get('searchTerm')
@@ -59,7 +69,7 @@ async def search_by_title():
         return jsonify({
             'status': 'success',
             'searchTerm': search_term,
-            'results': results
+            'courses': results
         })
     
     except Exception as e:
