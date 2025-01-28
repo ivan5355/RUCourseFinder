@@ -12,6 +12,11 @@ Semantic Search: By utilizing vector embeddings, the application ensures more ac
 
 Course Equivalency: For each Rutgers course, the application offers a list of equivalent courses at nearby community colleges.
 
+# Future Features:
+
+Provide how much the course costs to take at a communuity college compared to Rutgers.
+
+
 Distance Calculation: Displays the distance from the user’s location to community colleges offering equivalent courses, making it easier to evaluate nearby options.
 <img width="1497" alt="Screenshot 2025-01-01 at 3 04 50 PM" src="https://github.com/user-attachments/assets/974b5885-7458-45e5-9f50-d59e905f4f79" />
 <img width="1473" alt="Screenshot 2025-01-01 at 3 05 56 PM" src="https://github.com/user-attachments/assets/397f482e-9dd7-4773-a901-43827999466a" />
