@@ -18,6 +18,3 @@ Distance Calculation: Displays the distance from the user’s location to commun
 <img width="1505" alt="Screenshot 2025-01-01 at 3 08 04 PM" src="https://github.com/user-attachments/assets/6c8a2c95-ce1b-4a15-9c25-4cf3a74f887b" />
 <img width="1507" alt="Screenshot 2025-01-01 at 3 15 36 PM" src="https://github.com/user-attachments/assets/38ca8c92-0b18-4f19-9c1c-dd914b4112f3" />
 
-
-
-

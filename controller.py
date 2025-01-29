@@ -6,7 +6,6 @@ import aiohttp
 import pandas as pd
 import openai
 from pinecone import Pinecone
-import re
 from dotenv import load_dotenv
 
 
@@ -49,25 +48,158 @@ class course_search:
             self.courses_data = json.load(json_file)
 
         self.community_colleges = {
-            "Rowan College of South Jersey - Cumberland Campus": (39.4794, -75.0289),
-            "Atlantic Cape Community College": (39.4572, -74.7229),
-            "Bergen Community College": (40.9367, -74.0739),
-            "Brookdale Community College": (40.3294, -74.1089),
-            "Camden County College": (39.8008, -75.0475),
-            "County College of Morris": (40.8484, -74.5898),
-            "Essex County College": (40.7484, -74.1724),
-            "Hudson County Community College": (40.7228, -74.0543),
-            "Mercer County Community College": (40.3094, -74.6689),
-            "Middlesex College": (40.5194, -74.3889),
-            "Ocean County College": (39.9794, -74.1789),
-            "Passaic County Community College": (40.9167, -74.1667),
-            "Raritan Valley Community College": (40.5794, -74.6889),
-            "Rowan College at Burlington County": (39.9594, -74.9189),
-            "Rowan College of South Jersey - Gloucester Campus": (39.7394, -75.0089),
-            "Salem Community College": (39.6794, -75.4489),
-            "Sussex County Community College": (41.0594, -74.7589),
-            "UCNJ Union College of Union County, NJ": (40.6494, -74.3089),
-            "Warren County Community College": (40.7594, -75.0089)
+            "Rowan College of South Jersey - Cumberland Campus": {
+                "coords": (39.4794, -75.0289),
+                "price_per_credit": {
+                    "in_county": 126.00,
+                    "out_of_county": 154.00,
+                    "Required Fees": 46
+                }
+            },
+            "Atlantic Cape Community College": {
+                "coords": (39.4572, -74.7229),
+                "price_per_credit": {
+                    "in_county": 166.00,
+                    "out_of_county": 216.00,
+                    "Required Fees": 37
+                }
+            },
+            "Bergen Community College": {
+                "coords": (40.9367, -74.0739),
+                "price_per_credit": {
+                    "in_county": 157.45,
+                    "out_of_county": 292.00,
+                     "Required Fees":44.45
+                }
+            },
+            "Brookdale Community College": {
+                "coords": (40.3294, -74.1089),
+                "price_per_credit": {
+                    "in_county": 167.00,
+                    "out_of_county": 271.00,
+                    "Required Fees": 42.00
+                }
+            },
+            "Camden County College": {
+                "coords": (39.8008, -75.0475),
+                "price_per_credit": {
+                    "in_county": 144.00,
+                    "out_of_county": 288.00,
+                    "Required Fees": 42.00
+                }
+            },
+            "County College of Morris": {
+                "coords": (40.8484, -74.5898),
+                "price_per_credit": {
+                    "in_county": 143.00,
+                    "out_of_county": 286.00,
+                    "Required Fees": 43.00
+                }
+            },
+            "Essex County College": {
+                "coords": (40.7484, -74.1724),
+                "price_per_credit": {
+                    "in_county": 142.00,
+                    "out_of_county": 284.00,
+                    "Required Fees": 44.00
+                }
+            },
+            "Hudson County Community College": {
+                "coords": (40.7228, -74.0543),
+                "price_per_credit": {
+                    "in_county": 141.00,
+                    "out_of_county": 282.00,
+                    "Required Fees": 45.00
+                }
+            },
+            "Mercer County Community College": {
+                "coords": (40.3094, -74.6689),
+                "price_per_credit": {
+                    "in_county": 140.00,
+                    "out_of_county": 280.00,
+                    "Required Fees": 46.00
+                }
+            },
+            "Middlesex College": {
+                "coords": (40.5194, -74.3889),
+                "price_per_credit": {
+                    "in_county": 139.00,
+                    "out_of_county": 278.00,
+                    "Required Fees": 47.00
+                }
+            },
+            "Ocean County College": {
+                "coords": (39.9794, -74.1789),
+                "price_per_credit": {
+                    "in_county": 138.00,
+                    "out_of_county": 276.00,
+                    "Required Fees": 48.00
+                }
+            },
+            "Passaic County Community College": {
+                "coords": (40.9167, -74.1667),
+                "price_per_credit": {
+                    "in_county": 137.00,
+                    "out_of_county": 274.00,
+                    "Required Fees": 49.00
+                }
+            },
+            "Raritan Valley Community College": {
+                "coords": (40.5794, -74.6889),
+                "price_per_credit": {
+                    "in_county": 136.00,
+                    "out_of_county": 272.00,
+                    "Required Fees": 50.00
+                }
+            },
+            "Rowan College at Burlington County": {
+                "coords": (39.9594, -74.9189),
+                "price_per_credit": {
+                    "in_county": 135.00,
+                    "out_of_county": 270.00,
+                    "Required Fees": 51.00
+                }
+            },
+            "Rowan College of South Jersey - Gloucester Campus": {
+                "coords": (39.7394, -75.0089),
+                "price_per_credit": {
+                    "in_county": 134.00,
+                    "out_of_county": 268.00,
+                    "Required Fees": 52.00
+                }
+            },
+            "Salem Community College": {
+                "coords": (39.6794, -75.4489),
+                "price_per_credit": {
+                    "in_county": 133.00,
+                    "out_of_county": 266.00,
+                    "Required Fees": 53.00
+                }
+            },
+            "Sussex County Community College": {
+                "coords": (41.0594, -74.7589),
+                "price_per_credit": {
+                    "in_county": 132.00,
+                    "out_of_county": 264.00,
+                    "Required Fees": 54.00
+                }
+            },
+            "UCNJ Union College of Union County, NJ": {
+                "coords": (40.6494, -74.3089),
+                "price_per_credit": {
+                    "in_county": 131.00,
+                    "out_of_county": 262.00,
+                    "Required Fees": 55.00
+                }
+            },
+            "Warren County Community College": {
+                "coords": (40.7594, -75.0089),
+                "price_per_credit": {
+                    "in_county": 130.00,
+                    "out_of_county": 260.00,
+                    "Required Fees": 56.00
+                }
+            }
         }
 
          # Initialize course mappings
@@ -165,21 +297,22 @@ class course_search:
 
         return course_titles
 
-    async def get_distance(self, your_location, community_college_location):
+    async def get_distance(self, your_location, college_data):
         """
         Calculate the driving distance between two locations using the Mapbox Directions API.
 
         Args:
             your_location (tuple): A tuple containing the latitude and longitude of the user's location.
-            community_college_location (tuple): A tuple containing the latitude and longitude of the community college location.
+            college_data (dict): A dictionary containing the latitude and longitude of the community college location.
 
         Returns:
             float: The driving distance between the two locations in miles.
         """
         
-        if your_location is None or community_college_location is None:
+        if your_location is None or college_data is None:
             return float('inf')
 
+        community_college_location = college_data["coords"]
         # Mapbox API URL for Directions
         base_url = "https://api.mapbox.com/directions/v5/mapbox/driving"
         
@@ -360,7 +493,24 @@ class course_search:
    
         if your_location:
             course_equivalencies = await self.get_top_5_course_equivalencies_by_distance(course_code, your_location)
-            print(course_equivalencies)
+            for equiv in course_equivalencies:
+                college = equiv['community_college']
+                college_data = self.community_colleges.get(college, {})
+                price_data = college_data.get('price_per_credit', {})
+                
+                # Get prices and fees
+                in_county = price_data.get('in_county', 0)
+                out_county = price_data.get('out_of_county', 0)
+                fees = price_data.get('Required Fees', 0)
+                
+                # Store individual components
+                equiv['in_county_price'] = in_county
+                equiv['out_of_county_price'] = out_county
+                equiv['required_fees'] = fees
+                
+                # Calculate totals including fees (assuming 3 credits)
+                equiv['in_county_total'] = (in_county * 3) + fees
+                equiv['out_of_county_total'] = (out_county * 3) + fees
         else:
             print("No location provided. Skipping course equivalencies.")
 
