@@ -28,7 +28,7 @@ idna==3.10
 ipython==8.31.0
 itsdangerous==2.2.0
 jedi==0.19.2
-Jinja2==3.1.5
+Jinja2==3.1.6
 jiter==0.8.2
 jsonpickle==4.0.1
 MarkupSafe==3.0.2
