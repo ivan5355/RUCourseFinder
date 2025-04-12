@@ -1,54 +1,98 @@
 import os
 import json
-import openai
 import numpy as np
 from tqdm import tqdm
 import dotenv
-from pinecone import Pinecone
+from pinecone import Pinecone, ServerlessSpec
+from openai import OpenAI
 
+# Load environment variables
 dotenv.load_dotenv()
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
-pinecone_api_key = os.getenv("PINECONE_API_KEY") 
+# Initialize OpenAI client
+openai_api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=openai_api_key)
 
-# Initialize Pinecone using the correct API key
+# Initialize Pinecone client
+pinecone_api_key = os.getenv("PINECONE_API_KEY")
 pc = Pinecone(api_key=pinecone_api_key)
 
-# Name of the index
-index_name = "courses"  
-
-# The embedding dimension for text-embedding-ada-002
+# Pinecone index details
+index_name = "courses"
 dimension = 1536  
+metric = "cosine"
 
-# Access the Pinecone index
+# Check if the index exists
+existing_indexes = []
+for index in pc.list_indexes():
+    existing_indexes.append(index.name)
+
+if index_name not in existing_indexes:
+    print(f"Index '{index_name}' does not exist. Creating index...")
+    pc.create_index(
+        name=index_name,
+        dimension=dimension,
+        metric=metric,
+        spec=ServerlessSpec(
+            cloud='aws', 
+            region='us-east-1'  
+        )
+    )
+    print(f"Index '{index_name}' created successfully!")
+
+# Access the index
 index = pc.Index(index_name)
 
-# Load the Rutgers courses data from a JSON file
-with open('data/rutgers_courses.json', 'r') as json_file:
+# Load the Rutgers courses data from JSON file
+with open('../data/rutgers_courses.json', 'r') as json_file:
     courses_data = json.load(json_file)
 
-# Function to generate embeddings using OpenAI API
-def generate_embeddings(text):
-    response = openai.Embedding.create(
-        model="text-embedding-ada-002",  
-        input=text
+# Extract titles and IDs 
+titles = []
+course_ids = []
+
+for course in courses_data:
+    titles.append(course['title'])
+    course_ids.append(course['courseString'])
+
+# Function to generate embeddings for a batch of texts
+def generate_batch_embeddings(texts):
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=texts
     )
-    return np.array(response['data'][0]['embedding'])
+    embeddings = []
+    for item in response.data:
+        embeddings.append(np.array(item.embedding))
+    return embeddings
 
-# Process the courses and store embeddings in Pinecone
-print("Processing courses...")
+batch_size = 100
 
-for course in tqdm(courses_data, total=len(courses_data), desc="Processing courses"):
-    course_title = course.get('title')
+# Process in batches
+for i in tqdm(range(0, len(titles), batch_size), desc="Processing courses"):
+    batch_titles = []
+    batch_ids = []
 
-    if course_title:
+    for j in range(i, min(i + batch_size, len(titles))):
+        batch_titles.append(titles[j])
+        batch_ids.append(course_ids[j])
 
-        # Generate embeddings for the course title
-        embedding = generate_embeddings(course_title)
-        vector = embedding.tolist()  
+    # Generate embeddings for the batch
+    embeddings = generate_batch_embeddings(batch_titles)
 
-        # Upsert the vector into Pinecone (insert or update)
-        index.upsert([(course_title, vector)])
-    else:
-        print(f"Warning: Course without title found: {course}")
+    # Prepare vectors for upsert using courseString as ID
+    vectors_to_upsert = []
 
+    for k in range(len(batch_titles)):
+        course_id = batch_ids[k]
+        embedding = embeddings[k].tolist()
+        vectors_to_upsert.append((course_id, embedding))
+
+    # Upsert batch into Pinecone
+    index.upsert(vectors_to_upsert)
+
+print(f"Expected number of courses: {len(course_ids)}")
+
+# Check index stats
+index_stats = index.describe_index_stats()
+print(f"Total vectors in index '{index_name}': {index_stats['total_vector_count']}")

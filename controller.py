@@ -46,7 +46,7 @@ class course_search:
          # Load courses data
         with open(courses_data_path, 'r') as json_file:
             self.courses_data = json.load(json_file)
-            
+
         self.community_colleges = {
              "Rowan College of South Jersey - Cumberland Campus": (39.4794, -75.0289),
              "Atlantic Cape Community College": (39.4572, -74.7229),
@@ -128,7 +128,7 @@ class course_search:
         """
         response = openai.Embedding.create(
             input=text,
-            model="text-embedding-ada-002"
+            model="text-embedding-3-small"
         )
         return np.array(response['data'][0]['embedding'])
 
