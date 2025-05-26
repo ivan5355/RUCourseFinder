@@ -1,0 +1,437 @@
+:root {
+    --rutgers-red: #cc0033;
+    --rutgers-red-dark: #a50029;
+    --gray-100: #f9f9f9;
+    --gray-200: #eee;
+    --gray-300: #ddd;
+    --gray-400: #ccc;
+    --gray-500: #999;
+    --gray-600: #666;
+    --gray-700: #555;
+    --gray-800: #333;
+    --shadow-sm: 0 2px 10px rgba(0,0,0,0.05);
+    --shadow-md: 0 5px 15px rgba(0,0,0,0.1);
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 15px;
+}
+
+body {
+   font-family: 'Roboto', sans-serif;
+   line-height: 1.6;
+   padding: 0;
+   margin: 0;
+   background-color: var(--gray-100);
+   color: var(--gray-800);
+}
+
+.top-banner {
+   background-color: #cc0033;
+   color: white;
+   padding: 2rem 0;
+   margin-bottom: 2rem;
+}
+
+.top-banner h1 {
+   color: white;
+   margin-bottom: 1rem;
+}
+
+.top-banner h3 {
+   color: white;
+   font-weight: 300;
+   margin-bottom: 1rem;
+   max-width: 800px;
+   margin-left: auto;
+   margin-right: auto;
+}
+
+.top-banner p {
+   color: white;
+   margin: 0;
+}
+
+.navbar {
+   background-color: #cc0033;
+   padding: 1rem;
+   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-container {
+   max-width: 1200px;
+   margin: 0 auto;
+   display: flex;
+   flex-direction: column;
+   gap: 1rem;
+}
+
+.navbar-top {
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+}
+
+.navbar-brand {
+   color: white;
+   text-decoration: none;
+   font-size: 1.5rem;
+   font-weight: bold;
+}
+
+.navbar-links {
+   display: flex;
+   gap: 1.5rem;
+}
+
+.navbar-links a {
+   color: white;
+   text-decoration: none;
+   padding: 0.5rem 1rem;
+   border-radius: 4px;
+   transition: background-color 0.3s;
+}
+
+.navbar-links a:hover {
+   background-color: rgba(255,255,255,0.1);
+}
+
+.navbar-description {
+   color: white;
+   text-align: center;
+   max-width: 800px;
+   margin: 0 auto;
+}
+
+.navbar-description h3 {
+   color: white;
+   font-size: 16px;
+   font-weight: 300;
+   margin: 0 0 0.5rem 0;
+}
+
+.navbar-description p {
+   color: white;
+   margin: 0;
+   font-size: 14px;
+}
+
+.container {
+   max-width: 1200px;
+   margin: 0 auto;
+   padding: 0 20px;
+}
+
+h1 {
+   font-size: 24px;
+   margin-bottom: 10px;
+}
+
+h3 {
+   font-size: 16px;
+   font-weight: 300;
+   margin-top: 0;
+}
+
+#search-form {
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   margin: 40px 0;
+}
+
+.toggle-container {
+   margin-right: 10px;
+}
+
+#search-bar {
+   width: 400px;
+   padding: 12px;
+   margin-top: -10px;
+   font-size: 16px;
+   border: 1px solid #ddd;
+   border-radius: 4px 0 0 4px;
+   outline: none;
+}
+
+#search-button {
+   padding: 12px 20px;
+   margin-top: -10px;
+   font-size: 16px;
+   background-color: #cc0033;
+   color: white;
+   border: none;
+   border-radius: 0 4px 4px 0;
+   cursor: pointer;
+   transition: background-color 0.3s;
+}
+
+#search-button:hover {
+   background-color: #a50029;
+}
+
+.loading {
+   display: none;
+   margin-top: 20px;
+   text-align: center;
+}
+
+.spinner {
+   border: 4px solid #f3f3f3;
+   border-top: 4px solid #cc0033;
+   border-radius: 50%;
+   width: 40px;
+   height: 40px;
+   animation: spin 1s linear infinite;
+   margin: 0 auto;
+}
+
+@keyframes spin {
+   0% { transform: rotate(0deg); }
+   100% { transform: rotate(360deg); }
+}
+
+#search-results {
+   margin-top: 40px;
+   padding: 0 20px;
+}
+
+.course {
+   background-color: white;
+   margin-bottom: 8px;
+   padding: 8px;
+   border-radius: var(--radius-sm);
+   box-shadow: var(--shadow-sm);
+   transition: all 0.3s ease;
+   border: 1px solid var(--gray-200);
+}
+
+.course:hover {
+   transform: translateY(-1px);
+   box-shadow: var(--shadow-md);
+}
+
+.course-header {
+   display: flex;
+   justify-content: space-between;
+   align-items: flex-start;
+   margin-bottom: 6px;
+   padding-bottom: 6px;
+   border-bottom: 1px solid var(--gray-200);
+}
+
+.course-info {
+   display: flex;
+   align-items: center;
+   flex-wrap: wrap;
+   gap: 4px;
+}
+
+.course-title {
+   margin: 0;
+   color: var(--rutgers-red);
+   font-size: 0.9rem;
+   font-weight: 600;
+   line-height: 1.2;
+}
+
+.course-code {
+   font-family: 'Roboto Mono', monospace;
+   color: var(--gray-600);
+   font-size: 0.7rem;
+   background: var(--gray-100);
+   padding: 2px 4px;
+   border-radius: 2px;
+   margin-left: 4px;
+   font-weight: 500;
+   letter-spacing: 0.2px;
+}
+
+.course-section {
+   margin: 6px 0;
+   padding: 6px;
+   background: var(--gray-100);
+   border-radius: 3px;
+   border: 1px solid var(--gray-200);
+}
+
+.section-title {
+   font-size: 0.65rem;
+   font-weight: 600;
+   color: var(--gray-700);
+   margin-bottom: 4px;
+   text-transform: uppercase;
+   letter-spacing: 0.6px;
+}
+
+.professor-list {
+   list-style: none;
+   padding: 0;
+   margin: 0;
+   display: flex;
+   flex-wrap: wrap;
+   gap: 3px;
+}
+
+.professor-item {
+   display: inline-block;
+   background: white;
+   padding: 2px 5px;
+   border-radius: 8px;
+   font-size: 0.7rem;
+   border: 1px solid var(--gray-200);
+   color: var(--gray-700);
+   transition: all 0.2s ease;
+}
+
+.professor-item:hover {
+   background: var(--gray-100);
+   border-color: var(--gray-300);
+}
+
+.prerequisites {
+   color: var(--gray-700);
+   line-height: 1.3;
+   font-size: 0.75rem;
+}
+
+.equivalencies {
+   margin-top: 6px;
+   padding-top: 6px;
+   border-top: 1px solid var(--gray-200);
+}
+
+.equivalency-item {
+   display: flex;
+   align-items: center;
+   margin-bottom: 3px;
+   padding: 4px;
+   background: var(--gray-100);
+   border-radius: 3px;
+   transition: all 0.2s ease;
+}
+
+.equivalency-item:hover {
+   background: white;
+   box-shadow: var(--shadow-sm);
+}
+
+.college-name {
+   flex: 1;
+   font-weight: 500;
+   color: var(--gray-800);
+   font-size: 0.75rem;
+}
+
+.distance {
+   color: var(--gray-600);
+   font-size: 0.7rem;
+   margin: 0 4px;
+   white-space: nowrap;
+}
+
+.course-code-equiv {
+   font-family: 'Roboto Mono', monospace;
+   background: white;
+   padding: 1px 3px;
+   border-radius: 2px;
+   font-size: 0.7rem;
+   border: 1px solid var(--gray-200);
+   color: var(--gray-700);
+   white-space: nowrap;
+}
+
+.error-message {
+   color: #cc0033;
+   text-align: center;
+   padding: 20px;
+   background-color: #fff;
+   border-radius: 4px;
+   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+   margin: 20px 0;
+}
+
+.no-results {
+   text-align: center;
+   padding: 40px;
+   background: white;
+   border-radius: var(--radius-md);
+   color: var(--gray-600);
+   font-size: 1.1rem;
+   margin: 40px 0;
+   border: 2px dashed var(--gray-200);
+}
+
+.catalog-link {
+   display: inline-flex;
+   align-items: center;
+   gap: 3px;
+   padding: 4px 6px;
+   background-color: var(--gray-100);
+   color: var(--gray-700);
+   text-decoration: none;
+   border-radius: 3px;
+   font-size: 0.7rem;
+   border: 1px solid var(--gray-200);
+   transition: all 0.2s ease;
+}
+
+.catalog-link:hover {
+   background-color: white;
+   border-color: var(--rutgers-red);
+   color: var(--rutgers-red);
+}
+
+.catalog-link i {
+   font-size: 0.6rem;
+}
+
+@media (max-width: 768px) {
+   .container {
+       padding: 0 10px;
+   }
+
+   #search-results {
+       padding: 0 10px;
+   }
+
+   .course {
+       padding: 6px;
+       margin-bottom: 6px;
+   }
+
+   .course-header {
+       flex-direction: column;
+       gap: 4px;
+   }
+
+   .course-code {
+       margin-left: 0;
+       margin-top: 2px;
+       display: inline-block;
+   }
+
+   .course-section {
+       padding: 4px;
+       margin: 4px 0;
+   }
+
+   .equivalency-item {
+       flex-direction: column;
+       align-items: flex-start;
+       gap: 2px;
+       padding: 3px;
+   }
+
+   .distance, .course-code-equiv {
+       margin-left: 0;
+   }
+
+   .professor-list {
+       gap: 2px;
+   }
+
+   .catalog-link {
+       align-self: flex-start;
+       margin-top: 2px;
+   }
+} 

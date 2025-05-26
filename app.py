@@ -1,8 +1,8 @@
-from quart import Quart, render_template, request, jsonify
+from quart import Quart, render_template, request, jsonify, send_from_directory
 from controller import course_search
 from course_qa import CourseQA
 
-app = Quart(__name__, template_folder='templates')
+app = Quart(__name__, template_folder='templates', static_folder='static')
 courses_controller = course_search(courses_data_path='data/rutgers_courses.json')
 course_qa = CourseQA()
 
@@ -205,6 +205,11 @@ async def ask_question():
             'status': 'error',
             'message': f'An error occurred: {str(e)}'
         }), 500
+
+@app.route('/static/<path:filename>')
+async def static_files(filename):
+    """Serve static files"""
+    return await send_from_directory('static', filename)
 
 if __name__ == '__main__':
     app.run(debug=True)
