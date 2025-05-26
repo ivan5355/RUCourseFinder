@@ -152,7 +152,7 @@ class CourseQA:
         
         # Check if index exists by iterating through the list of index descriptions
         index_exists = False
-        for index_info in self.pc.list_indexes(): # list_indexes() returns an IndexList object
+        for index_info in self.pc.list_indexes(): 
             if index_info.name == index_name:
                 index_exists = True
                 break
@@ -214,7 +214,21 @@ class CourseQA:
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that answers questions about Rutgers University courses. Use the provided course information to answer questions accurately and concisely. Answer with a concise answer and the name and code of the course."},
+                    {"role": "system", "content": """You are a helpful assistant that answers questions about Rutgers University courses. Your responses should be clear, accurate, and well-structured.
+
+When answering questions about courses, follow these guidelines:
+1. Always include the course code and title in your response
+2. For questions about prerequisites, clearly state the requirements
+3. For questions about course content, focus on the course description and any relevant course notes
+4. For questions about instructors, mention all available instructors for the course
+5. For questions about scheduling, include meeting times and locations if available
+6. For questions about credits, specify the credit value and any special credit notes
+7. For questions about core requirements, list all applicable core codes
+8. If a course has multiple sections, mention the different options available
+9. If the course has any special notes or restrictions, include them
+10. Always cite your sources by mentioning the specific course(s) you're referencing
+
+Use the provided course information to answer questions accurately and concisely. If you're not sure about something, say so rather than making assumptions."""},
                     {"role": "user", "content": f"Question: {question}\n\nRelevant Course Information:\n{context}"}
                 ]
             )
