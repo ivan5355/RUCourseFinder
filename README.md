@@ -7,7 +7,7 @@ Additionally, the application provides a unique feature where students can view 
 
 1. Clone the repository:
    ```bash
-   git clone [repository-url]
+   git clone https://github.com/ivan5355/RUCourseFinder
    cd RUCourseFinder
    ```
 
@@ -23,17 +23,12 @@ Additionally, the application provides a unique feature where students can view 
    ```
 
 4. Set up environment variables:
-   Create a `.env` file in the root directory with the following variables:
+   Create accounts from Openai, Pinecone, and Mapbox and get their apikeys. Create a `.env` file in the root directory with the following variables:
    ```
    OPENAI_API_KEY=your_openai_api_key
    PINECONE_API_KEY=your_pinecone_api_key
-   PINECONE_ENVIRONMENT=your_pinecone_environment
+   MAPBOX_ACCESS_TOKEN=your_mapbox_token
    ```
-
-5. Initialize the database:
-   - Make sure you have the `data/rutgers_courses.json` file in place
-   - The application uses Pinecone for vector embeddings and OpenAI for generating embeddings
-   - Ensure your Pinecone and OpenAI accounts are properly set up with valid API keys
 
 ## Dependencies
 
@@ -84,36 +79,4 @@ Distance Calculation: Displays the distance from the user's location to communit
 <img width="1473" alt="Screenshot 2025-01-01 at 3 05 56 PM" src="https://github.com/user-attachments/assets/397f482e-9dd7-4773-a901-43827999466a" />
 <img width="1505" alt="Screenshot 2025-01-01 at 3 08 04 PM" src="https://github.com/user-attachments/assets/6c8a2c95-ce1b-4a15-9c25-4cf3a74f887b" />
 <img width="1507" alt="Screenshot 2025-01-01 at 3 15 36 PM" src="https://github.com/user-attachments/assets/38ca8c92-0b18-4f19-9c1c-dd914b4112f3" />
-
-## Troubleshooting
-
-### Pinecone Package Error
-If you see an error about `pinecone-client` being renamed to `pinecone`, follow these steps:
-
-1. Deactivate your virtual environment:
-   ```bash
-   deactivate
-   ```
-
-2. Remove the old virtual environment:
-   ```bash
-   rm -rf venv
-   ```
-
-3. Create a new virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows use: venv\Scripts\activate
-   ```
-
-4. Install the requirements fresh:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-If you still encounter issues, try manually removing the old package and installing the new one:
-```bash
-pip uninstall pinecone-client
-pip install pinecone
-```
 

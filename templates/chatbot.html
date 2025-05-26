@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RUCourseFinder - Course Chatbot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        .navbar {
+            background-color: #cc0033;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar-brand {
+            color: white;
+            text-decoration: none;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .navbar-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .navbar-links a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        .navbar-links a:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .chat-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1rem;
+        }
+
+        .chat-box {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background-color: #f5f5f5;
+            margin-right: auto;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            border-radius: 0 0 8px 8px;
+        }
+
+        #question-input {
+            flex-grow: 1;
+            padding: 0.8rem;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin-right: 0.5rem;
+            font-size: 1rem;
+        }
+
+        #ask-button {
+            padding: 0.8rem 1.5rem;
+            background-color: #cc0033;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+
+        #ask-button:hover {
+            background-color: #a50029;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #cc0033;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .relevant-courses {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .relevant-courses h4 {
+            margin: 0.5rem 0;
+            color: #333;
+        }
+
+        .relevant-courses ul {
+            margin: 0;
+            padding-left: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">RUCourseFinder</a>
+            <div class="navbar-links">
+                <a href="/">Course Search</a>
+                <a href="/chatbot" style="background-color: rgba(255,255,255,0.1);">Course Chatbot</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="chat-container">
+        <div class="chat-box">
+            <div class="chat-messages" id="chat-messages">
+                <div class="message bot-message">
+                    Hi! I'm the RU Course Assistant. I can help you find information about Rutgers courses. Feel free to ask me questions about course prerequisites, content, or any other course-related information!
+                </div>
+            </div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Thinking...</p>
+            </div>
+            <form class="chat-input" id="chat-form">
+                <input type="text" id="question-input" placeholder="Ask me anything about Rutgers courses..." />
+                <button type="submit" id="ask-button">
+                    <i class="fas fa-paper-plane"></i> Send
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const chatForm = document.getElementById('chat-form');
+        const questionInput = document.getElementById('question-input');
+        const loading = document.getElementById('loading');
+
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.innerHTML = content;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        chatForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const question = questionInput.value.trim();
+            
+            if (!question) return;
+
+            // Add user message
+            addMessage(question, true);
+            questionInput.value = '';
+
+            // Show loading state
+            loading.style.display = 'block';
+            
+            try {
+                const response = await fetch('/ask_question', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question: question
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // Create the bot response with the answer and relevant courses
+                    const botResponse = `
+                        <div class="answer-content">
+                            ${data.answer}
+                            ${data.relevant_courses ? `
+                                <div class="relevant-courses">
+                                    <h4>Relevant Courses:</h4>
+                                    <ul>
+                                        ${data.relevant_courses.map(course => `<li>${course}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                    addMessage(botResponse);
+                } else {
+                    addMessage(`Sorry, I encountered an error: ${data.message}`);
+                }
+            } catch (error) {
+                addMessage('Sorry, I encountered an error while processing your question. Please try again.');
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html> 

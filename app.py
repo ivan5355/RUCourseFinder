@@ -1,14 +1,20 @@
 from quart import Quart, render_template, request, jsonify
 from controller import course_search
+from course_qa import CourseQA
 
 app = Quart(__name__, template_folder='templates')
 courses_controller = course_search(courses_data_path='data/rutgers_courses.json')
+course_qa = CourseQA()
 
 your_location = None
 
 @app.route('/')
 async def search_page():
     return await render_template('main.html')
+
+@app.route('/chatbot')
+async def chatbot_page():
+    return await render_template('chatbot.html')
 
 @app.route('/save_location', methods=['POST'])
 async def save_location():
@@ -167,6 +173,44 @@ async def search_by_professor():
             'searchTerm': search_term,
             'results': results
          })
+    
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'An error occurred: {str(e)}'
+        }), 500
+
+@app.route('/ask_question', methods=['POST'])
+async def ask_question():
+    """
+    Handles questions about courses.
+
+    Expects a POST request with JSON payload containing 'question'.
+    Returns an answer and relevant course codes.
+
+    Returns:
+        JSON response containing the answer and relevant courses
+    """
+    try:
+        data = await request.json
+        question = data.get('question')
+        
+        if not question:
+            return jsonify({'status': 'error', 'message': 'Question is required'})
+
+        result = await course_qa.answer_question(question)
+        
+        if 'error' in result:
+            return jsonify({
+                'status': 'error',
+                'message': result['error'],
+                'details': result.get('details')
+            }), 500
+        
+        return jsonify({
+            'status': 'success',
+            'answer': result['answer'],
+        })
     
     except Exception as e:
         return jsonify({

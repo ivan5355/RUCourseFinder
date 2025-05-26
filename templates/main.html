@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     
-    
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-Z9RFLM5XHG"></script>
     <script>
@@ -28,16 +27,100 @@
            color: #333;
        }
 
+       .top-banner {
+           background-color: #cc0033;
+           color: white;
+           padding: 2rem 0;
+           margin-bottom: 2rem;
+       }
+
+       .top-banner h1 {
+           color: white;
+           margin-bottom: 1rem;
+       }
+
+       .top-banner h3 {
+           color: white;
+           font-weight: 300;
+           margin-bottom: 1rem;
+           max-width: 800px;
+           margin-left: auto;
+           margin-right: auto;
+       }
+
+       .top-banner p {
+           color: white;
+           margin: 0;
+       }
+
+       .navbar {
+           background-color: #cc0033;
+           padding: 1rem;
+           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+       }
+
+       .navbar-container {
+           max-width: 1200px;
+           margin: 0 auto;
+           display: flex;
+           flex-direction: column;
+           gap: 1rem;
+       }
+
+       .navbar-top {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+       }
+
+       .navbar-brand {
+           color: white;
+           text-decoration: none;
+           font-size: 1.5rem;
+           font-weight: bold;
+       }
+
+       .navbar-links {
+           display: flex;
+           gap: 1.5rem;
+       }
+
+       .navbar-links a {
+           color: white;
+           text-decoration: none;
+           padding: 0.5rem 1rem;
+           border-radius: 4px;
+           transition: background-color 0.3s;
+       }
+
+       .navbar-links a:hover {
+           background-color: rgba(255,255,255,0.1);
+       }
+
+       .navbar-description {
+           color: white;
+           text-align: center;
+           max-width: 800px;
+           margin: 0 auto;
+       }
+
+       .navbar-description h3 {
+           color: white;
+           font-size: 16px;
+           font-weight: 300;
+           margin: 0 0 0.5rem 0;
+       }
+
+       .navbar-description p {
+           color: white;
+           margin: 0;
+           font-size: 14px;
+       }
+
        .container {
            max-width: 1200px;
            margin: 0 auto;
            text-align: center;
-       }
-
-       .top-banner {
-           background-color: #cc0033;
-           color: white;
-           padding: 5px 0;
        }
 
        h1 {
@@ -156,50 +239,27 @@
                margin-bottom: 10px;
            }
        }
-
-       .visualize-btn {
-           background-color: #cc0033;
-           color: white;
-           padding: 10px 20px;
-           border: none;
-           border-radius: 4px;
-           cursor: pointer;
-           margin: 20px auto;
-           display: block;
-           font-size: 16px;
-           transition: all 0.3s ease;
-       }
-
-       .visualize-btn:hover {
-           background-color: #a50029;
-           transform: translateY(-1px);
-       }
-
-       #graph-container {
-           margin: 20px auto;
-           padding: 20px;
-           max-width: 1000px;
-       }
    </style>
 </head>
 
 <body>
-    <div class="top-banner">
-        <div class="container">
-            <h1>RUCourseFinder</h1>
-            <div class="top-banner">
-                <div class="container">
-                    <div class="container">
-                        <h3>
-                            Unlike WebReg, this platform allows you to search courses by title (leveraging vector embeddings for semantic search), professor, and course code, while also finding equivalent Rutgers courses from New Jersey's community colleges with ease.
-                        </h3>
-                        <p><strong>Disclaimer:</strong> This platform is not affiliated with Rutgers University.</p>
-                    </div>
-                    
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-top">
+                <a href="/" class="navbar-brand">RUCourseFinder</a>
+                <div class="navbar-links">
+                    <a href="/" style="background-color: rgba(255,255,255,0.1);">Course Search</a>
+                    <a href="/chatbot">Course Chatbot</a>
                 </div>
             </div>
+            <div class="navbar-description">
+                <h3>
+                    Unlike WebReg, this platform allows you to search courses by title (leveraging vector embeddings for semantic search), professor, and course code, while also finding equivalent Rutgers courses from New Jersey's community colleges with ease.
+                </h3>
+                <p><strong>Disclaimer:</strong> This platform is not affiliated with Rutgers University.</p>
+            </div>
         </div>
-    </div>
+    </nav>
     
     <div class="container">
         <form id="search-form">
@@ -226,21 +286,17 @@
             </div>
         </form>
     </div>
-    
 
-        <div class="loading">
-            <div class="spinner"></div>
-            <p>Loading results...</p>
-        </div>
+    <div class="loading">
+        <div class="spinner"></div>
+        <p>Loading results...</p>
+    </div>
 
-        <div id="search-results"></div>
-
+    <div id="search-results"></div>
 
     <script>
-
         let currentSearchType = 'title'; 
 
-        // Event listeners for radio buttons
         document.getElementById('toggle-course-title').addEventListener('change', function() {
             currentSearchType = 'title';
             document.getElementById('search-bar').placeholder = "Enter course title (e.g., Calculus)";
@@ -256,262 +312,218 @@
             document.getElementById('search-bar').placeholder = "Enter last 3 digits of course code (e.g., 101)";
         });
 
-        // Get user's location when the page loads  
         window.onload = function() {
              getLocation();
         };
 
-    // Get user's location
-    function getLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(sendPosition, showError);
-        } else {
-            document.getElementById("location").innerHTML = "Geolocation is not supported by this browser.";
-        }
-    }
-
-    // Send user's location to the server
-    function sendPosition(position) {
-        var latitude = position.coords.latitude;
-        var longitude = position.coords.longitude;
-
-        fetch('/save_location', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                latitude: latitude,
-                longitude: longitude
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Success:', data);
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        });
-    }
-
-    // Handle errors for locations
-    function showError(error) {
-        switch(error.code) {
-            case error.PERMISSION_DENIED:
-                console.log("User denied the request for Geolocation.");
-                break;
-            case error.POSITION_UNAVAILABLE:
-                console.log("Location information is unavailable.");
-                break;
-            case error.TIMEOUT:
-                console.log("The request to get user location timed out.");
-                break;
-            case error.UNKNOWN_ERROR:
-                console.log("An unknown error occurred.");
-                break;
-        }
-    }
-
-    //search by title
-    document.getElementById('search-form').addEventListener('submit', function(event) {
-        event.preventDefault();
-        clearSearch();
-        search();
-    });
-
-    //clear search results
-    function clearSearch() {
-        var resultsContainer = document.getElementById('search-results');
-        resultsContainer.innerHTML = '';
-    }
-
-    //search function with caching
-    function search() {
-        var searchTerm = document.getElementById('search-bar').value;
-        var loadingElement = document.querySelector('.loading');
-        var resultsContainer = document.getElementById('search-results');
-
-        // Show loading spinner
-        loadingElement.style.display = 'block';
-        resultsContainer.innerHTML = '';
-
-        // Unique key for each search type
-        const cacheKey = `${currentSearchType}:${searchTerm}`; 
-
-        const cachedResults = localStorage.getItem(cacheKey);
-
-         // Check local storage for cached results
-        if (cachedResults) {
-            displayCourses(JSON.parse(cachedResults));
-            loadingElement.style.display = 'none'; 
-            return; 
-        }
-
-        // Determine which endpoint to use based on search type
-        let endpoint;
-        switch(currentSearchType) {
-            case 'title':
-                endpoint = '/search_by_title';
-                break;
-            case 'professor':
-                endpoint = '/search_by_professor';
-                break;
-            case 'code':
-                endpoint = '/search_by_code';
-                break;
-            default:
-                endpoint = '/search_by_title';
-        }
-
-        fetch(endpoint, {
-            method: "POST",
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ searchTerm: searchTerm }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (currentSearchType === 'title' || currentSearchType === 'code') {
-                displayCourses(data.courses || []);
-                
-                // Cache the results in local storage
-                localStorage.setItem(cacheKey, JSON.stringify(data.courses || []));
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(sendPosition, showError);
             } else {
-                displayProfessorResults(data.results || []);
+                document.getElementById("location").innerHTML = "Geolocation is not supported by this browser.";
             }
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        })
-        .finally(() => {
-            // Hide loading spinner
-            loadingElement.style.display = 'none';
+        }
+
+        function sendPosition(position) {
+            var latitude = position.coords.latitude;
+            var longitude = position.coords.longitude;
+
+            fetch('/save_location', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    latitude: latitude,
+                    longitude: longitude
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+
+        function showError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    console.log("User denied the request for Geolocation.");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    console.log("Location information is unavailable.");
+                    break;
+                case error.TIMEOUT:
+                    console.log("The request to get user location timed out.");
+                    break;
+                case error.UNKNOWN_ERROR:
+                    console.log("An unknown error occurred.");
+                    break;
+            }
+        }
+
+        document.getElementById('search-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            clearSearch();
+            search();
         });
-    }
 
-    // Display the courses
-    function displayCourses(courses) {
-        var coursesContainer = document.getElementById('search-results');
-        coursesContainer.innerHTML = '';
+        function clearSearch() {
+            var resultsContainer = document.getElementById('search-results');
+            resultsContainer.innerHTML = '';
+        }
 
-        if (courses.length > 0) {
-            // Add visualization button only for major searches
-            if (currentSearchType === 'major') {
-                var visualizeButton = document.createElement('button');
-                visualizeButton.className = 'visualize-btn';
-                visualizeButton.innerHTML = '<i class="fas fa-project-diagram"></i> Visualize Course Prerequisites for Major';
-                visualizeButton.onclick = function() {
-                    visualizePrerequisites(courses);
-                };
-                coursesContainer.appendChild(visualizeButton);
+        function search() {
+            var searchTerm = document.getElementById('search-bar').value;
+            var loadingElement = document.querySelector('.loading');
+            var resultsContainer = document.getElementById('search-results');
 
-                // Add container for the graph
-                var graphContainer = document.createElement('div');
-                graphContainer.id = 'graph-container';
-                coursesContainer.appendChild(graphContainer);
+            loadingElement.style.display = 'block';
+            resultsContainer.innerHTML = '';
+
+            const cacheKey = `${currentSearchType}:${searchTerm}`; 
+            const cachedResults = localStorage.getItem(cacheKey);
+
+            if (cachedResults) {
+                displayCourses(JSON.parse(cachedResults));
+                loadingElement.style.display = 'none'; 
+                return; 
             }
 
-            courses.forEach(function(course) {
-                var titleElement = document.createElement('p');
-                titleElement.textContent = course.course_number + " " + course.title;
-                coursesContainer.appendChild(titleElement);
+            let endpoint;
+            switch(currentSearchType) {
+                case 'title':
+                    endpoint = '/search_by_title';
+                    break;
+                case 'professor':
+                    endpoint = '/search_by_professor';
+                    break;
+                case 'code':
+                    endpoint = '/search_by_code';
+                    break;
+                default:
+                    endpoint = '/search_by_title';
+            }
 
-                if (course.instructors.length > 0) {
-                    var professorsElement = document.createElement('p');
-                    professorsElement.textContent = 'Professors: ';
+            fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ searchTerm: searchTerm }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (currentSearchType === 'title' || currentSearchType === 'code') {
+                    displayCourses(data.courses || []);
+                    localStorage.setItem(cacheKey, JSON.stringify(data.courses || []));
+                } else {
+                    displayProfessorResults(data.results || []);
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                loadingElement.style.display = 'none';
+            });
+        }
 
-                    for (var i = 0; i < course.instructors.length; i++) {
-                        var professor = course.instructors[i][0];
-                        professorsElement.textContent += professor.name;
-                        console.log(professor.name);
+        function displayCourses(courses) {
+            var coursesContainer = document.getElementById('search-results');
+            coursesContainer.innerHTML = '';
 
-                        if (i < course.instructors.length - 1) {
-                            professorsElement.textContent += ', ';
+            if (courses.length > 0) {
+                for (var i = 0; i < courses.length; i++) {
+                    var course = courses[i];
+                    var titleElement = document.createElement('p');
+                    titleElement.textContent = course.course_number + " " + course.title;
+                    coursesContainer.appendChild(titleElement);
+
+                    if (course.instructors.length > 0) {
+                        var professorsElement = document.createElement('p');
+                        professorsElement.textContent = 'Professors: ';
+
+                        for (var j = 0; j < course.instructors.length; j++) {
+                            var professor = course.instructors[j][0];
+                            professorsElement.textContent += professor.name;
+
+                            if (j < course.instructors.length - 1) {
+                                professorsElement.textContent += ', ';
+                            }
                         }
+
+                        coursesContainer.appendChild(professorsElement);
+                    }
+                    
+                    var prereqElement = document.createElement('p');
+                    var cleanedPrerequisites = course.prerequisites.replace(/<\/?em>/g, '');
+                    prereqElement.textContent = 'Prerequisites: ' + cleanedPrerequisites;
+                    coursesContainer.appendChild(prereqElement);
+
+                    if (course.equivalencies && course.equivalencies.length > 0) {
+                        var equivalencyElement = document.createElement('p');
+                        equivalencyElement.textContent = 'Equivalencies: ';
+                        for (var k = 0; k < course.equivalencies.length; k++) {
+                            var equiv = course.equivalencies[k];
+                            equivalencyElement.textContent += equiv.community_college + ' (' + equiv.Distance +' miles'+')'+ ' - ' + equiv.code + ' ' + equiv.name;
+                            if (k < course.equivalencies.length - 1) {
+                                equivalencyElement.textContent += ', ';
+                            }
+                        }
+
+                        coursesContainer.appendChild(equivalencyElement);
+                    } else {
+                        var noEquivElement = document.createElement('p');
+                        noEquivElement.textContent = 'No equivalencies found.';
+                        coursesContainer.appendChild(noEquivElement);
                     }
 
-                    coursesContainer.appendChild(professorsElement);
+                    var separatorElement = document.createElement('hr');
+                    coursesContainer.appendChild(separatorElement);
                 }
-                
-                var prereqElement = document.createElement('p');
+            } else {
+                var messageElement = document.createElement('p');
+                messageElement.textContent = 'No search results found.';
+                coursesContainer.appendChild(messageElement);
+            }
+        }
 
-                // Remove <em> and </em> tags from the prerequisites string
-                var cleanedPrerequisites = course.prerequisites.replace(/<\/?em>/g, '');
+        function displayProfessorResults(results) {
+            var coursesContainer = document.getElementById('search-results');
+            coursesContainer.innerHTML = '';
 
-                prereqElement.textContent = 'Prerequisites: ' + cleanedPrerequisites;
-                coursesContainer.appendChild(prereqElement);
+            if (results.length > 0) {
+                for (var i = 0; i < results.length; i++) {
+                    var result = results[i];
+                    var professorDiv = document.createElement('div');
+                    professorDiv.className = 'course';
 
-                // Display the equivalencies
-                if (course.equivalencies && course.equivalencies.length > 0) {
-                    var equivalencyElement = document.createElement('p');
-                    equivalencyElement.textContent = 'Equivalencies: ';
-                    course.equivalencies.forEach(function(equiv, index) {
-                        equivalencyElement.textContent += equiv.community_college + ' (' + equiv.Distance +' miles'+')'+ ' - ' + equiv.code + ' ' + equiv.name;
-                        if (index < course.equivalencies.length - 1) {
-                            equivalencyElement.textContent += ', ';
-                        }
-                    });
+                    var professorName = document.createElement('h3');
+                    professorName.textContent = result.professor;
+                    professorDiv.appendChild(professorName);
 
-                    coursesContainer.appendChild(equivalencyElement);
-                } else {
-                    var noEquivElement = document.createElement('p');
-                    noEquivElement.textContent = 'No equivalencies found.';
-                    coursesContainer.appendChild(noEquivElement);
+                    var coursesList = document.createElement('div');
+
+                    for (var j = 0; j < result.courses.length; j++) {
+                        var course = result.courses[j];
+                        var courseInfo = document.createElement('p');
+                        courseInfo.textContent = `${course.courseString} - ${course.title}`;
+                        coursesList.appendChild(courseInfo);
+                    }
+
+                    professorDiv.appendChild(coursesList);
+                    coursesContainer.appendChild(professorDiv);
                 }
-
-                var separatorElement = document.createElement('hr');
-                coursesContainer.appendChild(separatorElement);
-            });
-
-        } else {
-            var messageElement = document.createElement('p');
-            messageElement.textContent = 'No search results found.';
-            coursesContainer.appendChild(messageElement);
+            } else {
+                var messageElement = document.createElement('p');
+                messageElement.className = 'no-results';
+                messageElement.textContent = 'No professors found.';
+                coursesContainer.appendChild(messageElement);
+            }
         }
-    }
-
-    // displays courses taught by professor
-    function displayProfessorResults(results) {
-        var coursesContainer = document.getElementById('search-results');
-        coursesContainer.innerHTML = '';
-
-        if (results.length > 0) {
-            results.forEach(function(result) {
-
-                var professorDiv = document.createElement('div');
-                professorDiv.className = 'course';
-
-                var professorName = document.createElement('h3');
-                professorName.textContent = result.professor;
-                professorDiv.appendChild(professorName);
-
-                var coursesList = document.createElement('div');
-
-                result.courses.forEach(function(course) {
-                    var courseInfo = document.createElement('p');
-                    courseInfo.textContent = `${course.courseString} - ${course.title}`;
-                    coursesList.appendChild(courseInfo);
-                });
-
-                professorDiv.appendChild(coursesList);
-                coursesContainer.appendChild(professorDiv);
-            });
-
-        //if no results are found
-        } else {
-            var messageElement = document.createElement('p');
-            messageElement.className = 'no-results';
-            messageElement.textContent = 'No professors found.';
-            coursesContainer.appendChild(messageElement);
-        }
-    }
-
-    // Add the visualization function
-    async function visualizePrerequisites(courses) {
-        
-    }
     </script>
-    
 </body>
-</html>
+</html> 

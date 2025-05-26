@@ -8,6 +8,7 @@ import openai
 from pinecone import Pinecone
 from dotenv import load_dotenv
 from openai import OpenAI
+from typing import List, Dict
 
 
 class course_search:
@@ -160,10 +161,18 @@ class course_search:
             for match in result['matches']:
                 print(f"Course ID: {match['id']}, Score: {match['score']}")
 
-        # Extract the course titles from the search results
-        course_titles = [match['id'] for match in result['matches']]
+        # Get course titles from matches
+        course_titles = []
+        for match in result['matches']:
+            course_titles.append(match['id'])
 
-        return course_titles
+        # Get detailed course information
+        courses = []
+        for title in course_titles:
+            if title in self.courses_by_title:
+                courses.append(self.courses_by_title[title])
+
+        return courses
 
     async def get_distance(self, your_location, college_data):
         """
@@ -262,27 +271,20 @@ class course_search:
             list: List of course objects that match the title
         """
         try:
-            print(f"Starting search_by_title with title: {title}")
             close_matches = self.search_courses(title, top_k = 5)
-            print(f"Close matches: {close_matches}")
-            
             matching_courses = []
             course_titles = []
 
             for match in close_matches:
-                print(f"Processing match: {match}")
                 # Remove colon from course code for lookup
-                course_code = match.replace(':', '')
+                course_code = match.get('courseString', '').replace(':', '')
                 matching_course = self.courses_by_code.get(course_code)
                 if matching_course is None:
-                    print(f"Warning: No course found for code: {course_code}")
                     continue
-                print(f"Found matching course: {matching_course.get('title')}")
                 course_info = await self.extract_course_data(matching_course, location)
                 matching_courses.append(course_info)
-                course_titles.append(match)
+                course_titles.append(match.get('title', ''))
             
-            print(f"Returning {len(matching_courses)} matching courses")
             return matching_courses
         except Exception as e:
             print(f"Error in search_by_title: {str(e)}")
@@ -311,33 +313,32 @@ class course_search:
         return matching_courses
                 
 
-    def search_by_professor(self, professor):
-        """
-        Search for courses by professor.
-
-        Args:
-            professor (str): Name of the professor to search for
-
-        Returns:
-            list: List of course objects that match the professor
-        """
-        matching_professors = []
-
-        # Search through the instructor:courses dictionary to get the courses taught by a professor
-        for instructor in self.instructors_courses.keys():
-            if professor.lower() in instructor.lower():
-                matching_professors.append(instructor)
+    def search_by_professor(self, professor_name: str) -> List[Dict]:
+        """Search for courses taught by a specific professor."""
+        # Convert to lowercase for case-insensitive search
+        professor_name = professor_name.lower()
         
-        results = []
+        # Find matching professors
+        matching_professors = []
+        for instructor in self.instructors_courses.keys():
+            if professor_name in instructor.lower():
+                matching_professors.append(instructor)
 
-        # Store the professor and their course titles in a list of dictionaries 
+        # Get courses for matching professors
+        results = []
         for professor in matching_professors:
             courses = self.instructors_courses[professor]
+            course_list = []
+            for course in courses:
+                course_list.append({
+                    'courseString': course['courseString'],
+                    'title': course['title']
+                })
             results.append({
                 'professor': professor,
-                'courses': courses
+                'courses': course_list
             })
-        
+
         return results
 
     async def extract_course_data(self, course, your_location):
@@ -351,22 +352,16 @@ class course_search:
             dict: Extracted course data that contains the course number, title, prerequisites, and instructors
         """
         try:
-            
-            print(f"Starting extract_course_data for course: {course.get('title')}")
             course_string = course.get('courseString')
             course_title = course.get('title')
             preq = course.get('preReqNotes') or "No prerequisites"
 
             sections = course.get('sections', [])
             instructors_for_course = []
-            print(f"Course title: {course_title}")
-            print(f"Course string: {course_string}")
 
             # Loops through each section to extract the instructors
             for section in sections:
-                print(f"Processing section: {section}")
                 instructor_for_section = section.get('instructors', [])
-                print(f"Instructors for section: {instructor_for_section}")
 
                 if not instructor_for_section:
                     instructor_for_section = [{'name': 'UNKNOWN'}]
@@ -375,17 +370,12 @@ class course_search:
                     instructors_for_course.append(instructor_for_section)
 
             course_code = course_string.replace(':', '')
-            print(f"Course code: {course_code}")
 
             # Only calculate equivalencies if location is provided
             course_equivalencies = []
        
             if your_location:
-                print(f"Calculating equivalencies for location: {your_location}")
                 course_equivalencies = await self.get_top_5_course_equivalencies_by_distance(course_code, your_location)
-                print(f"Found {len(course_equivalencies)} equivalencies")
-            else:
-                print("No location provided. Skipping course equivalencies.")
 
             course_data = {
                 'title': course_title,
@@ -395,13 +385,28 @@ class course_search:
                 'equivalencies': course_equivalencies,
             }
 
-            print("Successfully extracted course data")
             return course_data
         except Exception as e:
             print(f"Error in extract_course_data: {str(e)}")
             import traceback
             print(f"Traceback: {traceback.format_exc()}")
             raise
+
+    def get_course_instructors(self, course_code: str) -> List[str]:
+        """Get all instructors for a specific course."""
+        if course_code not in self.courses_by_code:
+            return []
+
+        course = self.courses_by_code[course_code]
+        sections = course.get('sections', [])
+        instructors_for_course = []
+
+        for section in sections:
+            instructor_for_section = section.get('instructors', [])
+            if instructor_for_section not in instructors_for_course:
+                instructors_for_course.append(instructor_for_section)
+
+        return instructors_for_course
 
 # Main function to test searching by title, code, and professor. 
 async def main():
