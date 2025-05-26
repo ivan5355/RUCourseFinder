@@ -172,7 +172,7 @@ async def ask_question():
     """
     Handles questions about courses.
 
-    Expects a POST request with JSON payload containing 'question'.
+    Expects a POST request with JSON payload containing 'question' and optional 'conversation_history'.
     Returns an answer and relevant course codes.
 
     Returns:
@@ -181,11 +181,12 @@ async def ask_question():
     try:
         data = await request.json
         question = data.get('question')
+        conversation_history = data.get('conversation_history', [])
         
         if not question:
             return jsonify({'status': 'error', 'message': 'Question is required'})
 
-        result = await course_qa.answer_question(question)
+        result = await course_qa.answer_question(question, conversation_history)
         
         if 'error' in result:
             return jsonify({

@@ -240,12 +240,27 @@
         const questionInput = document.getElementById('question-input');
         const loading = document.getElementById('loading');
 
+        // Store conversation history for context
+        let conversationHistory = [];
+
         function addMessage(content, isUser = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
             messageDiv.innerHTML = content;
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Add to conversation history
+            conversationHistory.push({
+                role: isUser ? 'user' : 'assistant',
+                content: isUser ? content : content.replace(/<[^>]*>/g, ''), // Strip HTML for context
+                timestamp: new Date().toISOString()
+            });
+
+            // Keep only last 10 exchanges (20 messages) to avoid token limits
+            if (conversationHistory.length > 20) {
+                conversationHistory = conversationHistory.slice(-20);
+            }
         }
 
         chatForm.addEventListener('submit', async function(event) {
@@ -268,7 +283,8 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        question: question
+                        question: question,
+                        conversation_history: conversationHistory.slice(0, -1) // Send history excluding current question
                     })
                 });
                 

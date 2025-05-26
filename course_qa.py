@@ -224,8 +224,8 @@ class CourseQA:
             print(f"Index {index_name} already exists.")
             self.index = self.pc.Index(index_name) # Set self.index if it already exists
     
-    async def answer_question(self, question):
-        """Answer a question about courses using vector search and GPT."""
+    async def answer_question(self, question, conversation_history=None):
+        """Answer a question about courses using vector search and GPT with conversation context."""
         if not self.index:
             print("Error: Pinecone index is not initialized.")
             return {
@@ -246,6 +246,15 @@ class CourseQA:
             # Prepare context from relevant courses
             context = "\n\n".join([match.metadata['text'] for match in search_results.matches])
             
+            # Prepare conversation history for context
+            conversation_context = ""
+            if conversation_history:
+                conversation_context = "\n\nPrevious Conversation:\n"
+                for msg in conversation_history[-6:]:  # Use last 6 messages for context
+                    role = "User" if msg['role'] == 'user' else "Assistant"
+                    conversation_context += f"{role}: {msg['content']}\n"
+                conversation_context += "\n"
+            
             # Generate answer using GPT
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -253,9 +262,16 @@ class CourseQA:
                     {"role": "system", "content": """You are a helpful Rutgers University course assistant.
 Your primary goal is to identify the specific course(s) the user is asking about and provide concise, relevant information for *that course* (or those courses).
 
+IMPORTANT: Pay attention to the conversation history. If the user asks follow-up questions like "what about the prerequisites?" or "when does it meet?" or uses pronouns like "it", "this course", "that class", refer back to the previous conversation to understand which course they're referring to.
+
 Structure of your response:
 1.  **Course Identification**: Start your response *immediately* with the `Course Code: [Code] - Title: [Title]` of the course most relevant to the user's question.
 2.  **Relevant Information**: Directly answer the user's question using only the information for the identified course. Do not include extraneous details.
+
+Context Handling:
+- If the user refers to a course mentioned earlier in the conversation (using "it", "this course", "that class", etc.), identify the course from the conversation history
+- If the user asks a follow-up question without specifying a course, assume they're asking about the most recently discussed course
+- If the context is unclear, ask for clarification about which specific course they're asking about
 
 Specific Formatting (always start with Course Code and Title):
 
@@ -310,7 +326,7 @@ General Guidelines:
 *   Use the provided "Relevant Course Information" to answer. If the information is not present, state that.
 *   Be concise. Avoid conversational filler.
 """},
-                    {"role": "user", "content": f"Question: {question}\n\nRelevant Course Information:\n{context}"}
+                    {"role": "user", "content": f"Question: {question}{conversation_context}\n\nRelevant Course Information:\n{context}"}
                 ]
             )
             
