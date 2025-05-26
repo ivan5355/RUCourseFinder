@@ -4,8 +4,6 @@ from openai import OpenAI
 from pinecone import Pinecone
 from dotenv import load_dotenv
 
-#test commit
-
 class CourseQA:
     def __init__(self):
         load_dotenv()
@@ -92,11 +90,47 @@ class CourseQA:
                 start_time = meeting.get('startTime', '')
                 end_time = meeting.get('endTime', '')
                 campus_name = meeting.get('campusName', '')
-                
-                if mode_desc or meeting_day or campus_name:
-                    meeting_detail = f"{mode_desc} {meeting_day} {start_time}-{end_time} at {campus_name}".strip()
-                    if meeting_detail not in meeting_info:
-                        meeting_info.append(meeting_detail)
+
+                # Convert day code to full name
+                day_map = {'M': 'Monday', 'T': 'Tuesday', 'W': 'Wednesday', 'Th': 'Thursday', 'F': 'Friday', 'S': 'Saturday', 'Su': 'Sunday'}
+                # Handle Th (Thursday) and Su (Sunday) properly
+                day_full = day_map.get(meeting_day, meeting_day)
+                if meeting_day == 'Th':
+                    day_full = 'Thursday'
+                elif meeting_day == 'Su':
+                    day_full = 'Sunday'
+                elif meeting_day == 'T':
+                    day_full = 'Tuesday'
+                elif meeting_day == 'S':
+                    day_full = 'Saturday'
+                elif meeting_day == 'F':
+                    day_full = 'Friday'
+                elif meeting_day == 'M':
+                    day_full = 'Monday'
+                elif meeting_day == 'W':
+                    day_full = 'Wednesday'
+
+                # Convert 24-hour time to 12-hour format
+                def format_time(t):
+                    if not t or len(t) != 4 or not t.isdigit():
+                        return t
+                    hour = int(t[:2])
+                    minute = int(t[2:])
+                    suffix = 'AM' if hour < 12 else 'PM'
+                    hour12 = hour if 1 <= hour <= 12 else (hour - 12 if hour > 12 else 12)
+                    return f"{hour12}:{minute:02d} {suffix}"
+                start_time_fmt = format_time(start_time)
+                end_time_fmt = format_time(end_time)
+
+                # Use clear label for mode (e.g., Lecture, Lab, etc.)
+                label = mode_desc if mode_desc else 'Meeting'
+                # Compose the string
+                if day_full and start_time_fmt and end_time_fmt and campus_name:
+                    meeting_detail = f"{label}: {day_full}, {start_time_fmt} – {end_time_fmt} at {campus_name}"
+                else:
+                    meeting_detail = f"{label}: {meeting_day} {start_time}-{end_time} at {campus_name}".strip()
+                if meeting_detail not in meeting_info:
+                    meeting_info.append(meeting_detail)
         
         instructors_text = ', '.join(instructors_list) if instructors_list else 'No instructors listed'
         section_notes_text = '. '.join(section_notes_list) if section_notes_list else ''
@@ -216,21 +250,66 @@ class CourseQA:
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": """You are a helpful assistant that answers questions about Rutgers University courses. Your responses should be clear, accurate, and well-structured.
+                    {"role": "system", "content": """You are a helpful Rutgers University course assistant.
+Your primary goal is to identify the specific course(s) the user is asking about and provide concise, relevant information for *that course* (or those courses).
 
-When answering questions about courses, follow these guidelines:
-1. Always include the course code and title in your response
-2. For questions about prerequisites, clearly state the requirements
-3. For questions about course content, focus on the course description and any relevant course notes
-4. For questions about instructors, mention all available instructors for the course
-5. For questions about scheduling, include meeting times and locations if available
-6. For questions about credits, specify the credit value and any special credit notes
-7. For questions about core requirements, list all applicable core codes
-8. If a course has multiple sections, mention the different options available
-9. If the course has any special notes or restrictions, include them
-10. Always cite your sources by mentioning the specific course(s) you're referencing
+Structure of your response:
+1.  **Course Identification**: Start your response *immediately* with the `Course Code: [Code] - Title: [Title]` of the course most relevant to the user's question.
+2.  **Relevant Information**: Directly answer the user's question using only the information for the identified course. Do not include extraneous details.
 
-Use the provided course information to answer questions accurately and concisely. If you're not sure about something, say so rather than making assumptions."""},
+Specific Formatting (always start with Course Code and Title):
+
+-   **If the question is about course times:**
+    ```
+    Course Code: [Code] - Title: [Title]
+    Section [Number]: [Instructor Name]
+    • [Day] [Start Time] - [End Time] at [Location]
+    ```
+    (List all relevant sections if multiple exist and match the query)
+
+-   **If the question is about prerequisites:**
+    ```
+    Course Code: [Code] - Title: [Title]
+    Prerequisites:
+    • [Requirement 1]
+    • [Requirement 2]
+    ```
+
+-   **If the question is about instructors:**
+    ```
+    Course Code: [Code] - Title: [Title]
+    Instructors:
+    • [Instructor 1]
+    • [Instructor 2]
+    ```
+
+-   **If the question is about course content/description:**
+    ```
+    Course Code: [Code] - Title: [Title]
+    Description: [Full Course Description]
+    Relevant Notes: [Any course notes, subject notes, unit notes if applicable and relevant to the question]
+    ```
+
+-   **If the question is about credits:**
+    ```
+    Course Code: [Code] - Title: [Title]
+    Credits: [Credit Value] ([Credit Description if any])
+    ```
+
+-   **If the question is about core requirements:**
+    ```
+    Course Code: [Code] - Title: [Title]
+    Core Requirements Met:
+    • [Core Code Description 1]
+    • [Core Code Description 2]
+    ```
+
+General Guidelines:
+*   If the user's question is vague or refers to multiple courses ambiguously, ask for clarification.
+*   If the question clearly refers to multiple specific courses, provide the information for each, clearly separated, following the structure above for each course.
+*   Use the provided "Relevant Course Information" to answer. If the information is not present, state that.
+*   Be concise. Avoid conversational filler.
+"""},
                     {"role": "user", "content": f"Question: {question}\n\nRelevant Course Information:\n{context}"}
                 ]
             )
