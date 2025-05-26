@@ -7,6 +7,7 @@ import pandas as pd
 import openai
 from pinecone import Pinecone
 from dotenv import load_dotenv
+from openai import OpenAI
 
 
 class course_search:
@@ -39,7 +40,7 @@ class course_search:
         self.mapbox_access_token = os.getenv("MAPBOX_ACCESS_TOKEN")
 
          # Initialize OpenAI and Pinecone clients
-        openai.api_key = self.openai_api_key
+        self.client = OpenAI(api_key=self.openai_api_key)
         self.pc = Pinecone(api_key=self.pinecone_api_key)
         self.index = self.pc.Index("courses")
 
@@ -126,11 +127,11 @@ class course_search:
         Returns:
             numpy.ndarray: The generated embeddings.
         """
-        response = openai.Embedding.create(
-            input=text,
-            model="text-embedding-3-small"
+        response = self.client.embeddings.create(
+            model="text-embedding-3-small",
+            input=text
         )
-        return np.array(response['data'][0]['embedding'])
+        return np.array(response.data[0].embedding)
 
     def search_courses(self, query, top_k):
         """
@@ -360,24 +361,6 @@ class course_search:
    
         if your_location:
             course_equivalencies = await self.get_top_5_course_equivalencies_by_distance(course_code, your_location)
-            for equiv in course_equivalencies:
-                college = equiv['community_college']
-                college_data = self.community_colleges.get(college, {})
-                price_data = college_data.get('price_per_credit', {})
-                
-                # Get prices and fees
-                in_county = price_data.get('in_county', 0)
-                out_county = price_data.get('out_of_county', 0)
-                fees = price_data.get('Required Fees', 0)
-                
-                # Store individual components
-                equiv['in_county_price'] = in_county
-                equiv['out_of_county_price'] = out_county
-                equiv['required_fees'] = fees
-                
-                # Calculate totals including fees (assuming 3 credits)
-                equiv['in_county_total'] = (in_county * 3) + fees
-                equiv['out_of_county_total'] = (out_county * 3) + fees
         else:
             print("No location provided. Skipping course equivalencies.")
 

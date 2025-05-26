@@ -90,6 +90,7 @@ async def search_by_code():
         JSON response with matching courses and their details
     """
     try:
+
         data = await request.json
         search_term = data.get('searchTerm', '')
         
@@ -133,6 +134,7 @@ async def search_by_professor():
         JSON response containing matching professors and their courses
     """
     try:
+        
         data = await request.json
         search_term = data.get('searchTerm')
         

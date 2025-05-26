@@ -47,14 +47,6 @@ index = pc.Index(index_name)
 with open('../data/rutgers_courses.json', 'r') as json_file:
     courses_data = json.load(json_file)
 
-# Extract titles and IDs 
-titles = []
-course_ids = []
-
-for course in courses_data:
-    titles.append(course['title'])
-    course_ids.append(course['courseString'])
-
 # Function to generate embeddings for a batch of texts
 def generate_batch_embeddings(texts):
     response = client.embeddings.create(
@@ -66,33 +58,36 @@ def generate_batch_embeddings(texts):
         embeddings.append(np.array(item.embedding))
     return embeddings
 
+titles = []
+for course in courses_data:
+    titles.append(course.get('title'))
+
 batch_size = 100
 
 # Process in batches
 for i in tqdm(range(0, len(titles), batch_size), desc="Processing courses"):
     batch_titles = []
-    batch_ids = []
-
     for j in range(i, min(i + batch_size, len(titles))):
         batch_titles.append(titles[j])
-        batch_ids.append(course_ids[j])
 
     # Generate embeddings for the batch
     embeddings = generate_batch_embeddings(batch_titles)
 
-    # Prepare vectors for upsert using courseString as ID
+    # Prepare vectors for upsert
     vectors_to_upsert = []
-
     for k in range(len(batch_titles)):
-        course_id = batch_ids[k]
+        title = batch_titles[k]
         embedding = embeddings[k].tolist()
-        vectors_to_upsert.append((course_id, embedding))
+        vectors_to_upsert.append((title, embedding))
 
     # Upsert batch into Pinecone
     index.upsert(vectors_to_upsert)
 
-print(f"Expected number of courses: {len(course_ids)}")
-
+print(f"Expected number of titles: {len(titles)}")
 # Check index stats
 index_stats = index.describe_index_stats()
 print(f"Total vectors in index '{index_name}': {index_stats['total_vector_count']}")
+
+
+
+

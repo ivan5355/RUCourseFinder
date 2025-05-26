@@ -37,7 +37,6 @@ def get_classes(community_college, college):
     except:
       pass
 
-
     submit_button = driver.find_element(By.NAME, "SubChgRI")
     submit_button.click()
 
