@@ -358,6 +358,7 @@ class course_search:
             course_string = course.get('courseString')
             course_title = course.get('title')
             preq = course.get('preReqNotes') or "No prerequisites"
+            synopsis_url = course.get('synopsisUrl', '')
 
             sections = course.get('sections', [])
             instructors_for_course = []
@@ -386,6 +387,7 @@ class course_search:
                 'instructors': instructors_for_course,
                 'prerequisites': preq,
                 'equivalencies': course_equivalencies,
+                'synopsisUrl': synopsis_url,
             }
 
             return course_data
