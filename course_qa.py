@@ -4,6 +4,8 @@ from openai import OpenAI
 from pinecone import Pinecone
 from dotenv import load_dotenv
 
+#test commit
+
 class CourseQA:
     def __init__(self):
         load_dotenv()
