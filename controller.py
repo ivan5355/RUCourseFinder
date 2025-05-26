@@ -144,35 +144,39 @@ class course_search:
         Returns:
             list: top 10 courses matching the search query.
         """
-        # Generate the embedding for the search query
-        query_embedding = self.generate_embeddings(query)
+        try:
+            # Generate the embedding for the search query
+            query_embedding = self.generate_embeddings(query)
 
-        # Perform the search in Pinecone
-        result = self.index.query(
-            vector=query_embedding.tolist(),  
-            top_k=top_k,
-            include_metadata=True
-        )
+            # Perform the search in Pinecone
+            result = self.index.query(
+                vector=query_embedding.tolist(),  
+                top_k=top_k,
+                include_metadata=True
+            )
 
-        if not result['matches']:
-            print(f"No matches found for query: {query}")
-        else:
-            print(f"Found {len(result['matches'])} matches for query: {query}")
+            if not result['matches']:
+                return []
+
+            # Get course codes from matches (Pinecone returns course codes as IDs)
+            course_codes = []
             for match in result['matches']:
-                print(f"Course ID: {match['id']}, Score: {match['score']}")
+                course_code = match['id']  # This is actually a course code like "01:198:111"
+                # Remove colon for lookup in courses_by_code
+                clean_code = course_code.replace(':', '')
+                course_codes.append(clean_code)
 
-        # Get course titles from matches
-        course_titles = []
-        for match in result['matches']:
-            course_titles.append(match['id'])
+            # Get detailed course information using course codes
+            courses = []
+            for code in course_codes:
+                if code in self.courses_by_code:
+                    courses.append(self.courses_by_code[code])
 
-        # Get detailed course information
-        courses = []
-        for title in course_titles:
-            if title in self.courses_by_title:
-                courses.append(self.courses_by_title[title])
-
-        return courses
+            return courses
+        
+        except Exception as e:
+            print(f"Error in search_courses: {str(e)}")
+            return []
 
     async def get_distance(self, your_location, college_data):
         """
@@ -189,7 +193,6 @@ class course_search:
         if your_location is None or college_data is None:
             return float('inf')
 
-        # college_data is already a tuple of (latitude, longitude)
         community_college_location = college_data
         
         # Mapbox API URL for Directions
@@ -281,15 +284,15 @@ class course_search:
                 matching_course = self.courses_by_code.get(course_code)
                 if matching_course is None:
                     continue
+                    
                 course_info = await self.extract_course_data(matching_course, location)
                 matching_courses.append(course_info)
                 course_titles.append(match.get('title', ''))
             
             return matching_courses
+            
         except Exception as e:
             print(f"Error in search_by_title: {str(e)}")
-            import traceback
-            print(f"Traceback: {traceback.format_exc()}")
             raise
 
     async def search_by_code(self, course_code, location=None):

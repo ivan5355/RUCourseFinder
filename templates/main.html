@@ -215,8 +215,24 @@
            color: #cc0033;
        }
        
+       .error-message {
+           color: #cc0033;
+           text-align: center;
+           padding: 20px;
+           background-color: #fff;
+           border-radius: 4px;
+           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+           margin: 20px 0;
+       }
+
        .no-results {
            text-align: center;
+           padding: 20px;
+           color: #666;
+           background-color: #fff;
+           border-radius: 4px;
+           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+           margin: 20px 0;
        }
 
        @media (max-width: 768px) {
@@ -380,6 +396,11 @@
             var loadingElement = document.querySelector('.loading');
             var resultsContainer = document.getElementById('search-results');
 
+            if (!searchTerm.trim()) {
+                resultsContainer.innerHTML = '<p class="error-message">Please enter a search term.</p>';
+                return;
+            }
+
             loadingElement.style.display = 'block';
             resultsContainer.innerHTML = '';
 
@@ -416,15 +437,29 @@
             })
             .then(response => response.json())
             .then(data => {
+                if (data.status === 'error') {
+                    resultsContainer.innerHTML = `<p class="error-message">${data.message}</p>`;
+                    return;
+                }
+                
                 if (currentSearchType === 'title' || currentSearchType === 'code') {
-                    displayCourses(data.courses || []);
-                    localStorage.setItem(cacheKey, JSON.stringify(data.courses || []));
+                    if (data.courses && data.courses.length > 0) {
+                        displayCourses(data.courses);
+                        localStorage.setItem(cacheKey, JSON.stringify(data.courses));
+                    } else {
+                        resultsContainer.innerHTML = '<p class="no-results">No courses found matching your search.</p>';
+                    }
                 } else {
-                    displayProfessorResults(data.results || []);
+                    if (data.results && data.results.length > 0) {
+                        displayProfessorResults(data.results);
+                    } else {
+                        resultsContainer.innerHTML = '<p class="no-results">No professors found matching your search.</p>';
+                    }
                 }
             })
             .catch((error) => {
                 console.error('Error:', error);
+                resultsContainer.innerHTML = '<p class="error-message">An error occurred while searching. Please try again.</p>';
             })
             .finally(() => {
                 loadingElement.style.display = 'none';
