@@ -93,7 +93,7 @@ class course_search:
             # Map by title
             self.courses_by_title[title] = course
             
-            # Map by full course code (removing colon)
+            # Map by full course code (removing colon and any whitespace)
             full_code = course_string.replace(':', '').strip()
             self.courses_by_code[full_code] = course
             
@@ -171,7 +171,7 @@ class course_search:
 
         Args:
             your_location (tuple): A tuple containing the latitude and longitude of the user's location.
-            college_data (dict): A dictionary containing the latitude and longitude of the community college location.
+            college_data (tuple): A tuple containing the latitude and longitude of the community college location.
 
         Returns:
             float: The driving distance between the two locations in miles.
@@ -180,7 +180,9 @@ class course_search:
         if your_location is None or college_data is None:
             return float('inf')
 
-        community_college_location = college_data["coords"]
+        # college_data is already a tuple of (latitude, longitude)
+        community_college_location = college_data
+        
         # Mapbox API URL for Directions
         base_url = "https://api.mapbox.com/directions/v5/mapbox/driving"
         
@@ -259,19 +261,34 @@ class course_search:
         Returns:
             list: List of course objects that match the title
         """
-        close_matches = self.search_courses(title, top_k = 5)
-        print(f"Close matches: {close_matches}")
-        
-        matching_courses = []
-        course_titles = []
+        try:
+            print(f"Starting search_by_title with title: {title}")
+            close_matches = self.search_courses(title, top_k = 5)
+            print(f"Close matches: {close_matches}")
+            
+            matching_courses = []
+            course_titles = []
 
-        for match in close_matches:
-            matching_course = self.courses_by_title.get(match.lower())
-            course_info = await self.extract_course_data(matching_course, location)
-            matching_courses.append(course_info)
-            course_titles.append(match)
-          
-        return matching_courses
+            for match in close_matches:
+                print(f"Processing match: {match}")
+                # Remove colon from course code for lookup
+                course_code = match.replace(':', '')
+                matching_course = self.courses_by_code.get(course_code)
+                if matching_course is None:
+                    print(f"Warning: No course found for code: {course_code}")
+                    continue
+                print(f"Found matching course: {matching_course.get('title')}")
+                course_info = await self.extract_course_data(matching_course, location)
+                matching_courses.append(course_info)
+                course_titles.append(match)
+            
+            print(f"Returning {len(matching_courses)} matching courses")
+            return matching_courses
+        except Exception as e:
+            print(f"Error in search_by_title: {str(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            raise
 
     async def search_by_code(self, course_code, location=None):
         """
@@ -333,46 +350,58 @@ class course_search:
         Returns:
             dict: Extracted course data that contains the course number, title, prerequisites, and instructors
         """
+        try:
+            
+            print(f"Starting extract_course_data for course: {course.get('title')}")
+            course_string = course.get('courseString')
+            course_title = course.get('title')
+            preq = course.get('preReqNotes') or "No prerequisites"
 
-        course_string = course.get('courseString')
-        course_title = course.get('title')
-        preq = course.get('preReqNotes') or "No prerequisites"
+            sections = course.get('sections', [])
+            instructors_for_course = []
+            print(f"Course title: {course_title}")
+            print(f"Course string: {course_string}")
 
-        sections = course.get('sections', [])
-        instructors_for_course = []
-        print(course_title)
-        print(course_string)
+            # Loops through each section to extract the instructors
+            for section in sections:
+                print(f"Processing section: {section}")
+                instructor_for_section = section.get('instructors', [])
+                print(f"Instructors for section: {instructor_for_section}")
 
-        # Loops through each section to extract the instructors
-        for section in sections:
-            print(section.get('instructors', []))
-            instructor_for_section = section.get('instructors', [])
+                if not instructor_for_section:
+                    instructor_for_section = [{'name': 'UNKNOWN'}]
 
-            if not instructor_for_section:
-                instructor_for_section = [{'name': 'UNKNOWN'}]
+                if instructor_for_section not in instructors_for_course:
+                    instructors_for_course.append(instructor_for_section)
 
-            if instructor_for_section not in instructors_for_course:
-                instructors_for_course.append(instructor_for_section)
+            course_code = course_string.replace(':', '')
+            print(f"Course code: {course_code}")
 
-        course_code = course_string.replace(':', '')
+            # Only calculate equivalencies if location is provided
+            course_equivalencies = []
+       
+            if your_location:
+                print(f"Calculating equivalencies for location: {your_location}")
+                course_equivalencies = await self.get_top_5_course_equivalencies_by_distance(course_code, your_location)
+                print(f"Found {len(course_equivalencies)} equivalencies")
+            else:
+                print("No location provided. Skipping course equivalencies.")
 
-         # Only calculate equivalencies if location is provided
-        course_equivalencies = []
-   
-        if your_location:
-            course_equivalencies = await self.get_top_5_course_equivalencies_by_distance(course_code, your_location)
-        else:
-            print("No location provided. Skipping course equivalencies.")
+            course_data = {
+                'title': course_title,
+                'course_number': course_string,
+                'instructors': instructors_for_course,
+                'prerequisites': preq,
+                'equivalencies': course_equivalencies,
+            }
 
-        course_data = {
-            'title': course_title,
-            'course_number': course_string,
-            'instructors': instructors_for_course,
-            'prerequisites': preq,
-            'equivalencies': course_equivalencies,
-        }
-
-        return course_data
+            print("Successfully extracted course data")
+            return course_data
+        except Exception as e:
+            print(f"Error in extract_course_data: {str(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            raise
 
 # Main function to test searching by title, code, and professor. 
 async def main():

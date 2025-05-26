@@ -45,27 +45,37 @@ async def search_by_title():
         JSON response containing the search status, search term, and a list of course results.
     """
     try:
+        print("Starting search_by_title request")
         data = await request.json
         search_term = data.get('searchTerm')
+        print(f"Received search term: {search_term}")
         
         # Input validation
         if not search_term:
+            print("Error: Search term is missing")
             return jsonify({'status': 'error', 'message': 'Search term is required'})
         
         if not your_location:
+            print("Error: Location not set")
             return jsonify({'status': 'error', 'message': 'Location not set'})
+        
+        print(f"Current location: {your_location}")
 
         # Gets the top courses, along with their course info(title, course_string, instructors, prerequisites, equivalencies)
         # that most closely macthes the title the user search
+        print("Calling courses_controller.search_by_title")
         results = await courses_controller.search_by_title(search_term, your_location)
+        print(f"Search results: {results}")
 
         if not results:
+            print("No results found")
             return jsonify({
                 'status': 'success',
                 'message': 'No results found',
                 'results': []
             })
         
+        print("Returning successful response")
         return jsonify({
             'status': 'success',
             'searchTerm': search_term,
@@ -73,6 +83,9 @@ async def search_by_title():
         })
     
     except Exception as e:
+        print(f"Error in search_by_title: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return jsonify({
             'status': 'error',
             'message': f'An error occurred: {str(e)}'
