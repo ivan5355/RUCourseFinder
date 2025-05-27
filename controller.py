@@ -5,6 +5,7 @@ import asyncio
 import aiohttp
 import pandas as pd
 import openai
+import re
 from pinecone import Pinecone
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -78,6 +79,12 @@ class course_search:
         self.instructors_courses = {}
 
         self.build_course_mappings()
+
+    def remove_em_tags(self, text):
+        """Remove <em> and </em> tags from text."""
+        if not text:
+            return text
+        return re.sub(r'</?em>', '', text)
 
     def build_course_mappings(self):
         """
@@ -358,6 +365,8 @@ class course_search:
             course_string = course.get('courseString')
             course_title = course.get('title')
             preq = course.get('preReqNotes') or "No prerequisites"
+            # Clean em tags from prerequisites
+            preq = self.remove_em_tags(preq)
             synopsis_url = course.get('synopsisUrl', '')
 
             sections = course.get('sections', [])
