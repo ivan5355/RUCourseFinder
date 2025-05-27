@@ -257,7 +257,7 @@ class CourseQA:
             
             # Generate answer using GPT
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": """You are a helpful Rutgers University course assistant.
 Your primary goal is to identify the specific course(s) the user is asking about and provide concise, relevant information for *that course* (or those courses).
