@@ -8,16 +8,30 @@ class CourseQA:
     def __init__(self):
         load_dotenv()
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
         self.pinecone_api_key = os.getenv("PINECONE_API_KEY")
         
-        # Initialize OpenAI and Pinecone clients
-        self.client = OpenAI(api_key=self.openai_api_key)
+        # Initialize OpenAI client for OpenRouter
+        self.client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=self.openrouter_api_key,
+        )
+        # Initialize Pinecone client (as before)
         self.pc = Pinecone(api_key=self.pinecone_api_key)
         self.index = None  # Initialize as None, will be set in initialize_vector_db
         
         # Load course data
         with open('data/rutgers_courses.json', 'r') as f:
             self.courses_data = json.load(f)
+        
+        # Load system prompt
+        self.system_prompt = self._load_system_prompt()
+        
+        # Load non-course system prompt
+        self.non_course_system_prompt = self._load_system_prompt("data/non_course_system_prompt.txt")
+        
+        # Load classifier system prompt
+        self.classifier_system_prompt = self._load_system_prompt("data/classifier_system_prompt.txt")
             
         # Initialize the vector database
         self.initialize_vector_db()
@@ -175,13 +189,39 @@ class CourseQA:
         return '\n'.join(text_parts)
     
     def generate_embedding(self, text):
-        """Generate embeddings for a given text."""
-        response = self.client.embeddings.create(
+        """Generate embeddings for a given text using OpenAI (for Pinecone)."""
+        # Check cache first
+        # if text in self.embedding_cache_qa:
+        #     return self.embedding_cache_qa[text]
+
+        # Use a separate OpenAI client instance for embeddings if you haven't modified it
+        # or ensure your self.client for OpenRouter doesn't interfere if it's the same.
+        # For simplicity, assuming a default OpenAI client or one specifically for embeddings.
+        # If self.client was re-initialized for OpenRouter, embeddings need their own client.
+        
+        # Let's create a dedicated OpenAI client for embeddings to avoid confusion
+        # if the main self.client is now for OpenRouter.
+        openai_embed_client = OpenAI(api_key=self.openai_api_key)
+
+        response = openai_embed_client.embeddings.create(
             model="text-embedding-3-small",
             input=text
         )
-        return response.data[0].embedding
+        embedding = response.data[0].embedding
+        # Store in cache
+        # self.embedding_cache_qa[text] = embedding
+        return embedding
     
+    def _load_system_prompt(self, prompt_file_path="data/chatbot_system_prompt.txt"):
+        """Load the system prompt from a text file."""
+        try:
+            with open(prompt_file_path, 'r') as f:
+                return f.read().strip()
+        except FileNotFoundError:
+            print(f"Error: Prompt file not found at {prompt_file_path}. Using default prompt.")
+            # Fallback to a default prompt if file is not found
+            return "You are a helpful Rutgers University course assistant." # A simple fallback
+
     def initialize_vector_db(self):
         """Initialize the vector database with course embeddings."""
         index_name = "course-qa"
@@ -233,6 +273,22 @@ class CourseQA:
                 'details': 'Pinecone index not available.'
             }
         try:
+            # Check if the question is course-related before searching
+            if not self._is_course_related_question(question):
+                # Handle non-course questions directly
+                response = self.client.chat.completions.create(
+                    model="meta-llama/llama-3.3-8b-instruct:free",
+                    messages=[
+                        {"role": "system", "content": self.non_course_system_prompt},
+                        {"role": "user", "content": question}
+                    ]
+                )
+                
+                return {
+                    'answer': response.choices[0].message.content,
+                    'relevant_courses': []
+                }
+            
             # Generate embedding for the question
             question_embedding = self.generate_embedding(question)
             
@@ -244,7 +300,10 @@ class CourseQA:
             )
             
             # Prepare context from relevant courses
-            context = "\n\n".join([match.metadata['text'] for match in search_results.matches])
+            context_parts = []
+            for match in search_results.matches:
+                context_parts.append(match.metadata['text'])
+            context = "\n\n".join(context_parts)
             
             # Prepare conversation history for context
             conversation_context = ""
@@ -255,84 +314,24 @@ class CourseQA:
                     conversation_context += f"{role}: {msg['content']}\n"
                 conversation_context += "\n"
             
-            # Generate answer using GPT
+            # Generate answer using Llama 3 via OpenRouter
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="meta-llama/llama-3.3-8b-instruct:free", # Changed model
                 messages=[
-                    {"role": "system", "content": """You are a helpful Rutgers University course assistant.
-Your primary goal is to identify the specific course(s) the user is asking about and provide concise, relevant information for *that course* (or those courses).
-
-IMPORTANT: Pay attention to the conversation history. If the user asks follow-up questions like "what about the prerequisites?" or "when does it meet?" or uses pronouns like "it", "this course", "that class", refer back to the previous conversation to understand which course they're referring to.
-
-Structure of your response:
-1.  **Course Identification**: Start your response *immediately* with the `Course Code: [Code] - Title: [Title]` of the course most relevant to the user's question.
-2.  **Relevant Information**: Directly answer the user's question using only the information for the identified course. Do not include extraneous details.
-
-Context Handling:
-- If the user refers to a course mentioned earlier in the conversation (using "it", "this course", "that class", etc.), identify the course from the conversation history
-- If the user asks a follow-up question without specifying a course, assume they're asking about the most recently discussed course
-- If the context is unclear, ask for clarification about which specific course they're asking about
-
-Specific Formatting (always start with Course Code and Title):
-
--   **If the question is about course times:**
-    ```
-    Course Code: [Code] - Title: [Title]
-    Section [Number]: [Instructor Name]
-    • [Day] [Start Time] - [End Time] at [Location]
-    ```
-    (List all relevant sections if multiple exist and match the query)
-
--   **If the question is about prerequisites:**
-    ```
-    Course Code: [Code] - Title: [Title]
-    Prerequisites:
-    • [Requirement 1]
-    • [Requirement 2]
-    ```
-
--   **If the question is about instructors:**
-    ```
-    Course Code: [Code] - Title: [Title]
-    Instructors:
-    • [Instructor 1]
-    • [Instructor 2]
-    ```
-
--   **If the question is about course content/description:**
-    ```
-    Course Code: [Code] - Title: [Title]
-    Description: [Full Course Description]
-    Relevant Notes: [Any course notes, subject notes, unit notes if applicable and relevant to the question]
-    ```
-
--   **If the question is about credits:**
-    ```
-    Course Code: [Code] - Title: [Title]
-    Credits: [Credit Value] ([Credit Description if any])
-    ```
-
--   **If the question is about core requirements:**
-    ```
-    Course Code: [Code] - Title: [Title]
-    Core Requirements Met:
-    • [Core Code Description 1]
-    • [Core Code Description 2]
-    ```
-
-General Guidelines:
-*   If the user's question is vague or refers to multiple courses ambiguously, ask for clarification.
-*   If the question clearly refers to multiple specific courses, provide the information for each, clearly separated, following the structure above for each course.
-*   Use the provided "Relevant Course Information" to answer. If the information is not present, state that.
-*   Be concise. Avoid conversational filler.
-"""},
-                    {"role": "user", "content": f"Question: {question}{conversation_context}\n\nRelevant Course Information:\n{context}"}
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": f"Question: {question}{conversation_context}\\n\\nRelevant Course Information:\\n{context}"}
                 ]
             )
             
+            # relevant_courses_list = [match.metadata['code'] for match in search_results.matches] # Old version
+            relevant_courses_list = []
+            for match in search_results.matches:
+                relevant_courses_list.append(match.metadata['code'])
+
             return {
                 'answer': response.choices[0].message.content,
-                'relevant_courses': [match.metadata['code'] for match in search_results.matches]
+                # 'relevant_courses': [match.metadata['code'] for match in search_results.matches]
+                'relevant_courses': relevant_courses_list
             }
             
         except Exception as e:
@@ -340,4 +339,23 @@ General Guidelines:
             return {
                 'error': 'Failed to generate answer',
                 'details': str(e)
-            } 
+            }
+
+    def _is_course_related_question(self, question):
+        """Determine if a question is related to courses using LLM."""
+        try:
+            response = self.client.chat.completions.create(
+                model="meta-llama/llama-3.3-8b-instruct:free",
+                messages=[
+                    {"role": "system", "content": self.classifier_system_prompt},
+                    {"role": "user", "content": f"Is this question related to university courses or academics?\n\nQuestion: {question}"}
+                ]
+            )
+            
+            answer = response.choices[0].message.content.strip().upper()
+            return answer == "YES"
+            
+        except Exception as e:
+            print(f"Error in course detection: {str(e)}")
+            # If there's an error, default to assuming it's course-related to be safe
+            return True 

@@ -6,19 +6,19 @@ $(document).ready(function() {
     
     // Event listeners for search type toggles
     $('#toggle-course-title').on('change', function() {
-        currentSearchType = 'title';
+    currentSearchType = 'title';
         $('#search-bar').attr('placeholder', "Enter course title (e.g., Calculus)");
-    });
+});
 
     $('#toggle-professor').on('change', function() {
-        currentSearchType = 'professor';
+    currentSearchType = 'professor';
         $('#search-bar').attr('placeholder', "Enter professor last name (e.g., Smith)");
-    });
+});
 
     $('#toggle-course-code').on('change', function() {
-        currentSearchType = 'code';
+    currentSearchType = 'code';
         $('#search-bar').attr('placeholder', "Enter last 3 digits of course code (e.g., 101)");
-    });
+});
 
     // Search form submission
     $('#search-form').on('submit', function(event) {
@@ -49,10 +49,10 @@ function sendPosition(position) {
             longitude: longitude
         }),
         success: function(data) {
-            console.log('Success:', data);
+        console.log('Success:', data);
         },
         error: function(error) {
-            console.error('Error:', error);
+        console.error('Error:', error);
         }
     });
 }
@@ -121,28 +121,28 @@ function search() {
         contentType: 'application/json',
         data: JSON.stringify({ searchTerm: searchTerm }),
         success: function(data) {
-            if (data.status === 'error') {
+        if (data.status === 'error') {
                 $resultsContainer.html(`<p class="error-message">${data.message}</p>`);
-                return;
-            }
-            
-            if (currentSearchType === 'title' || currentSearchType === 'code') {
-                if (data.courses && data.courses.length > 0) {
-                    displayCourses(data.courses);
-                    localStorage.setItem(cacheKey, JSON.stringify(data.courses));
-                } else {
-                    $resultsContainer.html('<p class="no-results">No courses found matching your search.</p>');
-                }
+            return;
+        }
+        
+        if (currentSearchType === 'title' || currentSearchType === 'code') {
+            if (data.courses && data.courses.length > 0) {
+                displayCourses(data.courses);
+                localStorage.setItem(cacheKey, JSON.stringify(data.courses));
             } else {
-                if (data.results && data.results.length > 0) {
-                    displayProfessorResults(data.results);
-                } else {
-                    $resultsContainer.html('<p class="no-results">No professors found matching your search.</p>');
-                }
+                    $resultsContainer.html('<p class="no-results">No courses found matching your search.</p>');
             }
+        } else {
+            if (data.results && data.results.length > 0) {
+                displayProfessorResults(data.results);
+            } else {
+                    $resultsContainer.html('<p class="no-results">No professors found matching your search.</p>');
+            }
+        }
         },
         error: function(error) {
-            console.error('Error:', error);
+        console.error('Error:', error);
             $resultsContainer.html('<p class="error-message">An error occurred while searching. Please try again.</p>');
         },
         complete: function() {
@@ -261,17 +261,44 @@ function displayProfessorResults(results) {
 
     if (results.length > 0) {
         results.forEach(result => {
-            const $professorDiv = $('<div>').addClass('course');
-            const $professorName = $('<h3>').text(result.professor);
-            const $coursesList = $('<div>');
+            // Check if this is a suggestions result
+            if (result.suggestions && result.message) {
+                // Display suggestions
+                const $suggestionsDiv = $('<div>').addClass('course suggestions-container');
+                const $messageDiv = $('<div>').addClass('suggestions-message').text(result.message);
+                const $suggestionsList = $('<div>').addClass('suggestions-list');
+                
+                const $suggestionsTitle = $('<h4>').text('Did you mean:');
+                $suggestionsList.append($suggestionsTitle);
+                
+                result.suggestions.forEach(suggestion => {
+                    const $suggestionItem = $('<div>')
+                        .addClass('suggestion-item')
+                        .text(suggestion)
+                        .on('click', function() {
+                            // When user clicks a suggestion, search for that professor
+                            $('#search-bar').val(suggestion);
+                            search();
+                        });
+                    $suggestionsList.append($suggestionItem);
+                });
+                
+                $suggestionsDiv.append($messageDiv, $suggestionsList);
+                $coursesContainer.append($suggestionsDiv);
+            } else {
+                // Display normal professor results
+                const $professorDiv = $('<div>').addClass('course');
+                const $professorName = $('<h3>').text(result.professor);
+                const $coursesList = $('<div>');
 
-            result.courses.forEach(course => {
-                const $courseInfo = $('<p>').text(`${course.courseString} - ${course.title}`);
-                $coursesList.append($courseInfo);
-            });
+                result.courses.forEach(course => {
+                    const $courseInfo = $('<p>').text(`${course.courseString} - ${course.title}`);
+                    $coursesList.append($courseInfo);
+                });
 
-            $professorDiv.append($professorName, $coursesList);
-            $coursesContainer.append($professorDiv);
+                $professorDiv.append($professorName, $coursesList);
+                $coursesContainer.append($professorDiv);
+            }
         });
     } else {
         const $messageElement = $('<p>')

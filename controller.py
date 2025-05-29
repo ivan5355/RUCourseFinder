@@ -328,28 +328,68 @@ class course_search:
         # Convert to lowercase for case-insensitive search
         professor_name = professor_name.lower()
         
-        # Find matching professors
-        matching_professors = []
+        # Find exact matching professors first
+        exact_matches = []
         for instructor in self.instructors_courses.keys():
             if professor_name in instructor.lower():
-                matching_professors.append(instructor)
+                exact_matches.append(instructor)
 
-        # Get courses for matching professors
-        results = []
-        for professor in matching_professors:
-            courses = self.instructors_courses[professor]
-            course_list = []
-            for course in courses:
-                course_list.append({
-                    'courseString': course['courseString'],
-                    'title': course['title']
+        # If we found exact matches, return them
+        if exact_matches:
+            results = []
+            for professor in exact_matches:
+                courses = self.instructors_courses[professor]
+                course_list = []
+                for course in courses:
+                    course_list.append({
+                        'courseString': course['courseString'],
+                        'title': course['title']
+                    })
+                results.append({
+                    'professor': professor,
+                    'courses': course_list
                 })
-            results.append({
-                'professor': professor,
-                'courses': course_list
-            })
+            return results
 
-        return results
+        # If no exact matches, find similar professors using fuzzy matching
+        similar_professors = self._find_similar_professors(professor_name)
+        
+        if similar_professors:
+            # Return suggestions instead of empty results
+            return [{
+                'professor': 'No exact match found',
+                'suggestions': similar_professors,
+                'message': f'No professor found with name "{professor_name}". Did you mean one of these?'
+            }]
+        
+        # If no similar professors found either
+        return []
+
+    def _find_similar_professors(self, search_name: str, max_suggestions: int = 5) -> List[str]:
+        """Find professors with similar names using fuzzy string matching."""
+        import difflib
+        
+        # Get all professor names
+        all_professors = list(self.instructors_courses.keys())
+        
+        # Use difflib to find similar names
+        # This will find names that are similar even with typos
+        similar_names = difflib.get_close_matches(
+            search_name, 
+            [prof.lower() for prof in all_professors], 
+            n=max_suggestions, 
+            cutoff=0.4  # Lower cutoff to catch more potential matches
+        )
+        
+        # Return the original case versions of the similar names
+        suggestions = []
+        for similar_name in similar_names:
+            for original_prof in all_professors:
+                if original_prof.lower() == similar_name:
+                    suggestions.append(original_prof)
+                    break
+        
+        return suggestions
 
     async def extract_course_data(self, course, your_location):
         """
