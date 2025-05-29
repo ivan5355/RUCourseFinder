@@ -3,22 +3,27 @@ import os
 from openai import OpenAI
 from pinecone import Pinecone
 from dotenv import load_dotenv
+import google.generativeai as genai
+import re
 
 class CourseQA:
     def __init__(self):
         load_dotenv()
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+        self.google_api_key = os.getenv("GOOGLE_API_KEY")
         self.pinecone_api_key = os.getenv("PINECONE_API_KEY")
         
-        # Initialize OpenAI client for OpenRouter
-        self.client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=self.openrouter_api_key,
-        )
+        # Initialize Google Gemini client
+        genai.configure(api_key=self.google_api_key)
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        
         # Initialize Pinecone client (as before)
         self.pc = Pinecone(api_key=self.pinecone_api_key)
         self.index = None  # Initialize as None, will be set in initialize_vector_db
+        
+        # Initialize course search controller for professor queries
+        from controller import course_search
+        self.course_controller = course_search()
         
         # Load course data
         with open('data/rutgers_courses.json', 'r') as f:
@@ -276,18 +281,16 @@ class CourseQA:
             # Check if the question is course-related before searching
             if not self._is_course_related_question(question):
                 # Handle non-course questions directly
-                response = self.client.chat.completions.create(
-                    model="meta-llama/llama-3.3-8b-instruct:free",
-                    messages=[
-                        {"role": "system", "content": self.non_course_system_prompt},
-                        {"role": "user", "content": question}
-                    ]
-                )
+                response = self.model.generate_content(self.non_course_system_prompt + "\n\n" + question)
                 
                 return {
-                    'answer': response.choices[0].message.content,
+                    'answer': response.text,
                     'relevant_courses': []
                 }
+            
+            # Check if this is a professor-related question
+            if self._is_professor_question(question):
+                return await self._handle_professor_question(question, conversation_history)
             
             # Generate embedding for the question
             question_embedding = self.generate_embedding(question)
@@ -314,14 +317,9 @@ class CourseQA:
                     conversation_context += f"{role}: {msg['content']}\n"
                 conversation_context += "\n"
             
-            # Generate answer using Llama 3 via OpenRouter
-            response = self.client.chat.completions.create(
-                model="meta-llama/llama-3.3-8b-instruct:free", # Changed model
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": f"Question: {question}{conversation_context}\\n\\nRelevant Course Information:\\n{context}"}
-                ]
-            )
+            # Generate answer using Google Gemini
+            prompt = f"{self.system_prompt}\n\nQuestion: {question}{conversation_context}\n\nRelevant Course Information:\n{context}"
+            response = self.model.generate_content(prompt)
             
             # relevant_courses_list = [match.metadata['code'] for match in search_results.matches] # Old version
             relevant_courses_list = []
@@ -329,7 +327,7 @@ class CourseQA:
                 relevant_courses_list.append(match.metadata['code'])
 
             return {
-                'answer': response.choices[0].message.content,
+                'answer': response.text,
                 # 'relevant_courses': [match.metadata['code'] for match in search_results.matches]
                 'relevant_courses': relevant_courses_list
             }
@@ -344,18 +342,118 @@ class CourseQA:
     def _is_course_related_question(self, question):
         """Determine if a question is related to courses using LLM."""
         try:
-            response = self.client.chat.completions.create(
-                model="meta-llama/llama-3.3-8b-instruct:free",
-                messages=[
-                    {"role": "system", "content": self.classifier_system_prompt},
-                    {"role": "user", "content": f"Is this question related to university courses or academics?\n\nQuestion: {question}"}
-                ]
-            )
+            response = self.model.generate_content(self.classifier_system_prompt + "\n\n" + f"Is this question related to university courses or academics?\n\nQuestion: {question}")
             
-            answer = response.choices[0].message.content.strip().upper()
+            answer = response.text.strip().upper()
             return answer == "YES"
             
         except Exception as e:
             print(f"Error in course detection: {str(e)}")
+
             # If there's an error, default to assuming it's course-related to be safe
             return True 
+
+    def _is_professor_question(self, question):
+        """Determine if a question is asking about what courses a professor teaches."""
+        question_lower = question.lower()
+        
+        # Keywords that suggest professor-related queries
+        professor_indicators = [
+            'professor', 'prof', 'instructor', 'teacher', 'teaches', 'taught by',
+            'what courses does', 'what classes does', 'courses taught by',
+            'classes taught by', 'who teaches', 'taught by'
+        ]
+        
+        # return any(indicator in question_lower for indicator in professor_indicators) # Old one-liner
+        for indicator in professor_indicators:
+            if indicator in question_lower:
+                return True
+        return False
+    
+    async def _handle_professor_question(self, question, conversation_history=None):
+        """Handle professor-related questions using the controller's professor search."""
+        try:
+            # Extract professor name from the question
+            professor_name = self._extract_professor_name(question)
+            
+            if not professor_name:
+                return {
+                    'answer': 'I couldn\'t identify the professor name in your question. Could you please specify which professor you\'re asking about?',
+                    'relevant_courses': []
+                }
+            
+            # Search for the professor using the controller
+            professor_results = self.course_controller.search_by_professor(professor_name)
+            
+            if not professor_results:
+                return {
+                    'answer': f'I couldn\'t find any courses taught by professor "{professor_name}". Please check the spelling or try searching with just the last name.',
+                    'relevant_courses': []
+                }
+            
+            # Check if we got suggestions instead of actual results
+            if len(professor_results) == 1 and 'suggestions' in professor_results[0]:
+                suggestions = professor_results[0]['suggestions']
+  
+                suggestions_text = ""
+                for prof in suggestions:
+                    suggestions_text += f"• {prof}\n"
+                
+                return {
+                    'answer': f'I couldn\'t find an exact match for professor "{professor_name}". Did you mean one of these professors?\n\n{suggestions_text.strip()}\n\nPlease ask again with the correct professor name.',
+                    'relevant_courses': []
+                }
+            
+            # Format the professor results into a readable response
+            response_parts = []
+            relevant_courses = []
+            
+            for result in professor_results:
+                professor = result['professor']
+                courses = result['courses']
+                
+                response_parts.append(f"Professor: {professor}")
+                response_parts.append(f"Courses taught:")
+                
+                for course in courses:
+                    course_line = f"• {course['courseString']} - {course['title']}"
+                    response_parts.append(course_line)
+                    relevant_courses.append(course['courseString'])
+                
+                response_parts.append("")  # Add blank line between professors
+            
+            formatted_response = '\n'.join(response_parts).strip()
+            
+            return {
+                'answer': formatted_response,
+                'relevant_courses': relevant_courses
+            }
+            
+        except Exception as e:
+            print(f"Error in _handle_professor_question: {str(e)}")
+            return {
+                'error': 'Failed to process professor question',
+                'details': str(e)
+            }
+    
+    def _extract_professor_name(self, question):
+        """Extract professor name from the question."""
+        # Remove common words
+        skip_words = ['professor', 'prof', 'instructor', 'dr', 'doctor', 'what', 'courses', 'does', 'teach', 'teaches', 'taught', 'by', 'classes']
+        
+        # Find potential name words
+        name_words = []
+        for word in question.split():
+            clean_word = word.strip('.,?!:;')
+            if clean_word.lower() not in skip_words and clean_word:
+                if clean_word[0].isupper() or len(clean_word) > 3:
+                    name_words.append(clean_word)
+        
+        if name_words:
+            name = ' '.join(name_words[:2])  # Take first 2 words max
+            if len(name) > 1 and name.replace(' ', '').isalpha():
+                return name
+        
+        return None
+    
+  
