@@ -9,6 +9,7 @@ import re
 from pinecone import Pinecone
 from dotenv import load_dotenv
 from openai import OpenAI
+import google.generativeai as genai
 from typing import List, Dict
 
 
@@ -39,14 +40,17 @@ class course_search:
 
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.pinecone_api_key = os.getenv("PINECONE_API_KEY")
+        self.google_api_key = os.getenv("GOOGLE_API_KEY")
         self.mapbox_access_token = os.getenv("MAPBOX_ACCESS_TOKEN")
 
-         # Initialize OpenAI and Pinecone clients
-        self.client = OpenAI(api_key=self.openai_api_key)
+        # Initialize Google Gemini client for embeddings
+        genai.configure(api_key=self.google_api_key)
+        
+        # Initialize Pinecone client
         self.pc = Pinecone(api_key=self.pinecone_api_key)
-        self.index = self.pc.Index("courses")
+        self.index = self.pc.Index("courses-gemini")  # Changed to use Gemini embeddings index
 
-         # Load courses data
+        # Load courses data
         with open(courses_data_path, 'r') as json_file:
             self.courses_data = json.load(json_file)
 
@@ -127,7 +131,7 @@ class course_search:
 
     def generate_embeddings(self, text):
         """
-        Generate embeddings for a given text.
+        Generate embeddings for a given text using Google's text-embedding-004.
 
         Args:
             text (str): The text to generate embeddings for.
@@ -135,11 +139,17 @@ class course_search:
         Returns:
             numpy.ndarray: The generated embeddings.
         """
-        response = self.client.embeddings.create(
-            model="text-embedding-3-small",
-            input=text
-        )
-        return np.array(response.data[0].embedding)
+        try:
+            result = genai.embed_content(
+                model="models/text-embedding-004",
+                content=text,
+                task_type="retrieval_query"  # For search queries
+            )
+            return np.array(result['embedding'])
+        except Exception as e:
+            print(f"Error generating embedding: {e}")
+            # Fallback to zeros if embedding fails
+            return np.zeros(768)  # text-embedding-004 has 768 dimensions
 
     def search_courses(self, query, top_k):
         """

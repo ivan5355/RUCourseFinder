@@ -68,14 +68,6 @@ window.addEventListener('load', function() {
                 const botResponse = `
                     <div class="answer-content">
                         ${data.answer}
-                        ${data.relevant_courses ? `
-                            <div class="relevant-courses">
-                                <h4>Relevant Courses:</h4>
-                                <ul>
-                                    ${data.relevant_courses.map(course => `<li>${course}</li>`).join('')}
-                                </ul>
-                            </div>
-                        ` : ''}
                     </div>
                 `;
                 addMessage(botResponse);
