@@ -6,6 +6,7 @@ $(document).ready(function() {
 
     // Check if all required elements exist
     if (!$chatForm.length || !$questionInput.length || !$chatMessages.length || !$loading.length) {
+        console.error('Required elements not found');
         return;
     }
 
@@ -57,24 +58,34 @@ $(document).ready(function() {
                 data: JSON.stringify({
                     question: question,
                     conversation_history: conversationHistory.slice(0, -1)
-                })
+                }),
+                dataType: 'json'
             });
             
-            const data = await response.json();
-            
-            if (data.status === 'success') {
+            // Response is already parsed JSON with $.ajax()
+            if (response.status === 'success') {
                 const botResponse = `
                     <div class="answer-content">
-                        ${data.answer}
+                        ${response.answer}
                     </div>
                 `;
                 addMessage(botResponse);
             } else {
-                addMessage('Sorry, I encountered an error: ' + response.message);
+                addMessage('Sorry, I encountered an error: ' + (response.message || 'Unknown error'));
             }
         } catch (error) {
             console.error('Error:', error);
-            addMessage('Sorry, I encountered an error while processing your question. Please try again.');
+            
+            // Handle different types of errors
+            let errorMessage = 'Sorry, I encountered an error while processing your question. Please try again.';
+            
+            if (error.responseJSON && error.responseJSON.message) {
+                errorMessage = 'Error: ' + error.responseJSON.message;
+            } else if (error.statusText) {
+                errorMessage = 'Network error: ' + error.statusText;
+            }
+            
+            addMessage(errorMessage);
         } finally {
             $loading.hide();
         }
@@ -90,4 +101,6 @@ $(document).ready(function() {
             handleSubmit(event);
         }
     });
+
+    console.log('Chatbot JavaScript loaded successfully');
 });
