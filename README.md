@@ -1,3 +1,6 @@
+<img width="1489" alt="Screenshot 2025-06-03 at 7 50 11 PM" src="https://github.com/user-attachments/assets/b4e4c4b4-99d2-49c0-9a07-edee9baa46ac" />
+<img width="1468" alt="Screenshot 2025-06-03 at 7 49 32 PM" src="https://github.com/user-attachments/assets/b3312975-5ae1-4fc0-86eb-a48cabaf37f0" />
+
 ## RU Course Finder
 
 The RU Course Finder application enhances the existing course search functionality at Rutgers University by allowing users to search for courses based on course title, professor, or course code. Unlike the current search, which relies on exact keyword matches, my application incorporates semantic search. This feature compares vector embeddings of the user's search query with embeddings of actual course titles, improving the accuracy and relevance of search results—especially when searching by course title. This makes it easier for users to find courses even when their search terms don't exactly match the course title.
