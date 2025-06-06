@@ -1,6 +1,7 @@
 from quart import Quart, render_template, request, jsonify, send_from_directory
 from controller import course_search
 from course_qa import CourseQA
+from content_based_recommender import ContentBasedCourseRecommender
 import os
 
 app = Quart(__name__)
@@ -10,6 +11,8 @@ app.template_folder = 'templates'
 
 courses_controller = course_search(courses_data_path='data/rutgers_courses.json')
 course_qa = CourseQA()
+# Initialize content-based recommender
+content_recommender = ContentBasedCourseRecommender('data/rutgers_courses.json')
 
 your_location = None
 
@@ -42,6 +45,139 @@ async def save_location():
         'latitude': latitude, 
         'longitude': longitude
     })
+
+@app.route('/get_recommendations', methods=['POST'])
+async def get_recommendations():
+    """
+    Get course recommendations based on user preferences.
+    
+    Expects JSON payload with user preferences:
+    {
+        'interests': ['computer science', 'data science'],
+        'preferred_subjects': ['Computer Science', 'Statistics'],
+        'preferred_schools': ['School of Engineering'],
+        'preferred_level': 'U',
+        'preferred_credits': 3,
+        'difficulty_preference': 'Intermediate',
+        'core_requirements': ['QR', 'WCD'],
+        'completed_courses': ['01:198:111', '01:198:112'],
+        'career_goals': 'software engineering',
+        'num_recommendations': 10
+    }
+    
+    Returns:
+        JSON response with recommended courses
+    """
+    try:
+        data = await request.json
+        
+        # Extract user preferences
+        user_preferences = {
+            'interests': data.get('interests', []),
+            'preferred_subjects': data.get('preferred_subjects', []),
+            'preferred_schools': data.get('preferred_schools', []),
+            'preferred_level': data.get('preferred_level', 'U'),
+            'preferred_credits': data.get('preferred_credits'),
+            'difficulty_preference': data.get('difficulty_preference'),
+            'core_requirements': data.get('core_requirements', []),
+            'completed_courses': data.get('completed_courses', []),
+            'career_goals': data.get('career_goals', '')
+        }
+        
+        num_recommendations = data.get('num_recommendations', 10)
+        
+        # Get recommendations
+        recommendations = content_recommender.recommend_courses(
+            user_preferences, 
+            num_recommendations=num_recommendations
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'recommendations': recommendations,
+            'total_found': len(recommendations)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'An error occurred: {str(e)}'
+        }), 500
+
+@app.route('/get_similar_courses', methods=['POST'])
+async def get_similar_courses():
+    """
+    Find courses similar to a given course.
+    
+    Expects JSON payload with:
+    {
+        'course_id': '01:198:111',
+        'num_similar': 5
+    }
+    
+    Returns:
+        JSON response with similar courses
+    """
+    try:
+        data = await request.json
+        course_id = data.get('course_id')
+        num_similar = data.get('num_similar', 5)
+        
+        if not course_id:
+            return jsonify({'status': 'error', 'message': 'Course ID is required'})
+        
+        similar_courses = content_recommender.find_similar_courses(
+            course_id, num_similar=num_similar
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'course_id': course_id,
+            'similar_courses': similar_courses
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'An error occurred: {str(e)}'
+        }), 500
+
+@app.route('/filter_courses', methods=['POST'])
+async def filter_courses():
+    """
+    Filter courses by specific criteria.
+    
+    Expects JSON payload with filtering criteria:
+    {
+        'subject_description': 'Computer Science',
+        'level': 'U',
+        'credits': 3,
+        'school_description': 'School of Engineering'
+    }
+    
+    Returns:
+        JSON response with filtered courses
+    """
+    try:
+        data = await request.json
+        
+        # Get filtering criteria
+        criteria = {k: v for k, v in data.items() if v is not None and v != ''}
+        
+        filtered_courses = content_recommender.get_courses_by_criteria(**criteria)
+        
+        return jsonify({
+            'status': 'success',
+            'criteria': criteria,
+            'courses': filtered_courses[:50],  # Limit to 50 courses
+            'total_found': len(filtered_courses)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'An error occurred: {str(e)}'
+        }), 500
 
 @app.route('/search_by_title', methods=['POST'])
 async def search_by_title():

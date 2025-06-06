@@ -89,7 +89,7 @@ Response:"""
                 # Simple prompt for general conversation
                 general_prompt = f"You are a helpful AI assistant. Respond naturally and helpfully to the user's question.\n\nQuestion: {question}{conversation_context}"
                 
-                model = genai.GenerativeModel("gemini-1.5-flash")
+                model = genai.GenerativeModel("gemini-2.5-flash")
                 response = model.generate_content(general_prompt)
                 
                 return {
