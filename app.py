@@ -1,7 +1,5 @@
 from quart import Quart, render_template, request, jsonify, send_from_directory
 from controller import course_search
-from course_qa import CourseQA
-from content_based_recommender import ContentBasedCourseRecommender
 import os
 
 app = Quart(__name__)
@@ -10,9 +8,6 @@ app.static_folder = 'static'
 app.template_folder = 'templates'
 
 courses_controller = course_search(courses_data_path='data/rutgers_courses.json')
-course_qa = CourseQA()
-# Initialize content-based recommender
-content_recommender = ContentBasedCourseRecommender('data/rutgers_courses.json')
 
 your_location = None
 
@@ -20,9 +15,7 @@ your_location = None
 async def search_page():
     return await render_template('main.html')
 
-@app.route('/chatbot')
-async def chatbot_page():
-    return await render_template('chatbot.html')
+
 
 @app.route('/save_location', methods=['POST'])
 async def save_location():

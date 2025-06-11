@@ -9,4 +9,3 @@ venv/
 templates/recommendations.html
 content_based_recommender.py
 
-

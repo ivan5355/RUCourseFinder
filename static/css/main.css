@@ -67,15 +67,16 @@ body {
 
 .navbar-top {
    display: flex;
-   justify-content: space-between;
+   justify-content: center;
    align-items: center;
 }
 
 .navbar-brand {
    color: white;
    text-decoration: none;
-   font-size: 1.5rem;
+   font-size: 2rem;
    font-weight: bold;
+   text-align: center;
 }
 
 .navbar-links {
@@ -432,6 +433,19 @@ h3 {
    .catalog-link {
        align-self: flex-start;
        margin-top: 2px;
+   }
+
+   /* Banner responsive */
+   .banner {
+       padding: 1.5rem 0.5rem;
+   }
+
+   .banner-title {
+       font-size: 1.5rem;
+   }
+
+   .description-text {
+       font-size: 0.85rem;
    }
 }
 

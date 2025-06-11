@@ -38,8 +38,8 @@ Additionally, the application provides a unique feature where students can view 
 ## Dependencies
 
 The application requires the following main dependencies:
-- Quart: Web framework for the application
-- Google Generative AI: For embeddings and chat functionality using Gemini models
+- Flask: Web framework for the application
+- Google Generative AI: For embeddings using text-embedding-004 model
 - Pinecone: Vector database for semantic search
 - Pandas: Data manipulation and analysis
 - Selenium: Web scraping course equivalencies
@@ -60,7 +60,7 @@ All dependencies are listed in `requirements.txt` and will be installed automati
 
 3. Open your web browser and navigate to:
    ```
-   http://localhost:5002
+   http://localhost:5000
    ```
 
 4. Allow location access when prompted to enable distance calculation features
@@ -75,18 +75,10 @@ All dependencies are listed in `requirements.txt` and will be installed automati
 
 **Distance Calculation**: Displays the distance from the user's location to community colleges offering equivalent courses, making it easier to evaluate nearby options.
 
-**AI Chatbot**: An intelligent chatbot powered by Google's Gemini 1.5 Flash model that can answer questions about Rutgers courses, helping students make informed decisions about their course selections. The chatbot features:
-- Course-related question detection to provide relevant RAG (Retrieval-Augmented Generation) responses
-- Conversation history awareness for follow-up questions
-- Support for general conversation when questions aren't course-related
-- Information about course content, prerequisites, instructors, schedules, and general course-related queries
-
-**Smart Context Handling**: The system intelligently determines whether user questions are course-related and activates the appropriate response mechanism, providing either detailed course information through RAG or general conversation capabilities.
-
 ## Technical Architecture
 
-- **Backend**: Python with Quart framework
-- **AI Models**: Google Gemini 1.5 Flash for chat, Google text-embedding-004 for semantic search
+- **Backend**: Python with Flask framework
+- **AI Models**: Google text-embedding-004 for semantic search
 - **Vector Database**: Pinecone for storing and retrieving course embeddings
 - **Data Processing**: Custom embedding generation and course data management
 - **Frontend**: HTML/CSS/JavaScript with modern responsive design

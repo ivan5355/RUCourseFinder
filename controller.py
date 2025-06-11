@@ -4,11 +4,9 @@ import numpy as np
 import asyncio
 import aiohttp
 import pandas as pd
-import openai
 import re
 from pinecone import Pinecone
 from dotenv import load_dotenv
-from openai import OpenAI
 import google.generativeai as genai
 from typing import List, Dict
 
@@ -38,7 +36,6 @@ class course_search:
 
         load_dotenv()
 
-        self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.pinecone_api_key = os.getenv("PINECONE_API_KEY")
         self.google_api_key = os.getenv("GOOGLE_API_KEY")
         self.mapbox_access_token = os.getenv("MAPBOX_ACCESS_TOKEN")
