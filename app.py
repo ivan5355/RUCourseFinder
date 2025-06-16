@@ -1,19 +1,28 @@
-from quart import Quart, render_template, request, jsonify, send_from_directory
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from controller import course_search
 import os
 
-app = Quart(__name__)
+app = FastAPI()
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Templates
+templates = Jinja2Templates(directory="templates")
 
 courses_controller = course_search(courses_data_path='data/rutgers_courses.json')
 
 your_location = None
 
-@app.route('/')
-async def search_page():
-    return await render_template('main.html')
+@app.get("/", response_class=HTMLResponse)
+async def search_page(request: Request):
+    return templates.TemplateResponse("main.html", {"request": request})
 
-@app.route('/save_location', methods=['POST'])
-async def save_location():
+@app.post("/save_location")
+async def save_location(request: Request):
     """
     Save user's current location.
     
@@ -23,19 +32,19 @@ async def save_location():
     Returns:
         JSON response with location status and coordinates
     """
-    data = await request.json
+    data = await request.json()
     latitude = data.get('latitude')
     longitude = data.get('longitude')
     global your_location
     your_location = (latitude, longitude)
-    return jsonify({
+    return {
         'status': 'success', 
         'latitude': latitude, 
         'longitude': longitude
-    })
+    }
 
-@app.route('/search_by_title', methods=['POST'])
-async def search_by_title():
+@app.post("/search_by_title")
+async def search_by_title(request: Request):
     """
     Handles search requests for courses by title.
 
@@ -46,42 +55,48 @@ async def search_by_title():
     Returns:
         JSON response containing the search status, search term, and a list of course results.
     """
+    if not courses_controller:
+        return {
+            'status': 'error',
+            'message': 'Search functionality is disabled. Please check API keys in .env file.'
+        }
+    
     try:
-        data = await request.json
+        data = await request.json()
         search_term = data.get('searchTerm')
         
         # Input validation
         if not search_term:
-            return jsonify({'status': 'error', 'message': 'Search term is required'})
+            return {'status': 'error', 'message': 'Search term is required'}
         
         if not your_location:
-            return jsonify({'status': 'error', 'message': 'Location not set'})
+            return {'status': 'error', 'message': 'Location not set'}
 
         # Gets the top courses, along with their course info(title, course_string, instructors, prerequisites, equivalencies)
         # that most closely macthes the title the user search
         results = await courses_controller.search_by_title(search_term, your_location)
 
         if not results:
-            return jsonify({
+            return {
                 'status': 'success',
                 'message': 'No results found',
                 'results': []
-            })
+            }
         
-        return jsonify({
+        return {
             'status': 'success',
             'searchTerm': search_term,
             'courses': results
-        })
+        }
     
     except Exception as e:
-        return jsonify({
+        return {
             'status': 'error',
             'message': f'An error occurred: {str(e)}'
-        }), 500
+        }
 
-@app.route('/search_by_code', methods=['POST'])
-async def search_by_code():
+@app.post("/search_by_code")
+async def search_by_code(request: Request):
     """
     Handles search requests for courses by last 3 digits of course code.
 
@@ -93,39 +108,39 @@ async def search_by_code():
     """
     try:
 
-        data = await request.json
+        data = await request.json()
         search_term = data.get('searchTerm', '')
         
         if not search_term:
-            return jsonify({'status': 'error', 'message': 'Course code is required'})
+            return {'status': 'error', 'message': 'Course code is required'}
         
         if not your_location:
-            return jsonify({'status': 'error', 'message': 'Location not set'})
+            return {'status': 'error', 'message': 'Location not set'}
 
         # returns all courses and their course info that ends with the 3 digits the user specifies 
         results = await courses_controller.search_by_code(search_term, your_location)
 
         if not results:
-            return jsonify({
+            return {
                 'status': 'success',
                 'message': 'No results found',
                 'courses': []
-            })
+            }
         
-        return jsonify({
+        return {
             'status': 'success',
             'courseCode': search_term,
             'courses': results
-        })
+        }
     
     except Exception as e:
-        return jsonify({
+        return {
             'status': 'error',
             'message': f'An error occurred: {str(e)}'
-        }), 500
+        }
 
-@app.route('/search_by_professor', methods=['POST'])
-async def search_by_professor():
+@app.post("/search_by_professor")
+async def search_by_professor(request: Request):
     """
     Handles search requests for courses by professor name.
 
@@ -135,40 +150,35 @@ async def search_by_professor():
     Returns:
         JSON response containing matching professors and their courses
     """
+
     try:
         
-        data = await request.json
+        data = await request.json()
         search_term = data.get('searchTerm')
         
         if not search_term:
-            return jsonify({'status': 'error', 'message': 'Professor name is required'})
+            return {'status': 'error', 'message': 'Professor name is required'}
 
         results = courses_controller.search_by_professor(search_term)
 
         if not results:
-            return jsonify({
+            return {
                 'status': 'success',
                 'message': 'No results found',
                 'results': []
-            })
+            }
         
-        return jsonify({
+        return {
             'searchTerm': search_term,
             'results': results
-         })
+         }
     
     except Exception as e:
-        return jsonify({
+        return {
             'status': 'error',
             'message': f'An error occurred: {str(e)}'
-        }), 500
-
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'An error occurred: {str(e)}'
-        }), 500
-
+        }
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5002)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=5005)  
