@@ -3,9 +3,6 @@ from controller import course_search
 import os
 
 app = Quart(__name__)
-# Ensure static files are properly configured
-app.static_folder = 'static'
-app.template_folder = 'templates'
 
 courses_controller = course_search(courses_data_path='data/rutgers_courses.json')
 
@@ -166,39 +163,6 @@ async def search_by_professor():
             'message': f'An error occurred: {str(e)}'
         }), 500
 
-@app.route('/ask_question', methods=['POST'])
-async def ask_question():
-    """
-    Handles questions about courses.
-
-    Expects a POST request with JSON payload containing 'question' and optional 'conversation_history'.
-    Returns an answer and relevant course codes.
-
-    Returns:
-        JSON response containing the answer and relevant courses
-    """
-    try:
-        data = await request.json
-        question = data.get('question')
-        conversation_history = data.get('conversation_history', [])
-        
-        if not question:
-            return jsonify({'status': 'error', 'message': 'Question is required'})
-
-        result = await course_qa.answer_question(question, conversation_history)
-        
-        if 'error' in result:
-            return jsonify({
-                'status': 'error',
-                'message': result['error'],
-                'details': result.get('details')
-            }), 500
-        
-        return jsonify({
-            'status': 'success',
-            'answer': result['answer'],
-        })
-    
     except Exception as e:
         return jsonify({
             'status': 'error',
