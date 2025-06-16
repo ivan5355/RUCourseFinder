@@ -483,4 +483,40 @@ h3 {
     color: white;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(204, 0, 51, 0.3);
+}
+
+/* Professor Suggestions Styles */
+.suggestions-container {
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+}
+
+.suggestions-message {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: #495057;
+    font-weight: 500;
+}
+
+.suggestions-list h4 {
+    margin: 0.5rem 0;
+    color: #343a40;
+    font-size: 1rem;
+}
+
+.suggestion-item {
+    background: #e9ecef;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid #ced4da;
+}
+
+.suggestion-item:hover {
+    background: #cc0033;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(204, 0, 51, 0.3);
 } 
