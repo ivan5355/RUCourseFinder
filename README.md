@@ -7,7 +7,6 @@ The RU Course Finder application enhances the existing course search functionali
 
 Additionally, the application provides a unique feature where students can view equivalent courses at local community colleges, along with the distance to these colleges and the name of the equivalent course.
 
-
 ## Installation and Setup
 
 1. Clone the repository:
@@ -38,7 +37,9 @@ Additionally, the application provides a unique feature where students can view 
 ## Dependencies
 
 The application requires the following main dependencies:
-- Flask: Web framework for the application
+- FastAPI: Modern, fast web framework for building APIs
+- Uvicorn: ASGI server for running FastAPI applications
+- Jinja2: Template engine for rendering HTML
 - Google Generative AI: For embeddings using text-embedding-004 model
 - Pinecone: Vector database for semantic search
 - Pandas: Data manipulation and analysis
@@ -46,6 +47,8 @@ The application requires the following main dependencies:
 - BeautifulSoup4: HTML parsing
 - NumPy: Numerical computing
 - python-dotenv: Environment variable management
+- aiohttp: Asynchronous HTTP client/server
+- python-multipart: For handling multipart/form-data
 
 All dependencies are listed in `requirements.txt` and will be installed automatically during setup.
 
@@ -60,7 +63,7 @@ All dependencies are listed in `requirements.txt` and will be installed automati
 
 3. Open your web browser and navigate to:
    ```
-   http://localhost:5000
+   http://localhost:5005
    ```
 
 4. Allow location access when prompted to enable distance calculation features
@@ -77,11 +80,12 @@ All dependencies are listed in `requirements.txt` and will be installed automati
 
 ## Technical Architecture
 
-- **Backend**: Python with Flask framework
+- **Backend**: Python with FastAPI framework and Uvicorn ASGI server
 - **AI Models**: Google text-embedding-004 for semantic search
 - **Vector Database**: Pinecone for storing and retrieving course embeddings
 - **Data Processing**: Custom embedding generation and course data management
 - **Frontend**: HTML/CSS/JavaScript with modern responsive design
+- **Asynchronous Processing**: FastAPI's async/await support for improved performance
 
   
 
