@@ -1,10 +1,64 @@
 
+// Storing and Caching User Location 
+
+//1. Gets the user's cached location from localStorage
+//2. If valid location exists, send to backend
+//3. If no valid location exists, prompt user for fresh location
+//4. If user denies location, show error message
+
+// Getting and Caching Search Results
+
+//1. Gets the user's cached search results from localStorage
+//2. If valid search results exist, use them
+//3. If no valid search results exist, prompt user for fresh search results
+//4. If user denies search results, show error message
+
+
+// Initialize location on page load
+window.addEventListener('DOMContentLoaded', function() {
+    // Check if valid location is cached
+    const cachedLocation = getCachedLocation();
+
+    // If valid location exists, send to backend
+    if (cachedLocation) {
+        saveLocationToBackend(cachedLocation.latitude, cachedLocation.longitude);
+    } else {
+        // No valid cached location, prompt user for fresh location
+        getLocation();
+    }
+}); 
+
 function getLocation() {
     if (navigator.geolocation) {
+
+        //position argument is implicitly passed to sendPosition
         navigator.geolocation.getCurrentPosition(sendPosition, showError);
     } else {
         $("#location").html("Geolocation is not supported by this browser.");
     }
+}
+
+// Send location to backend
+function saveLocationToBackend(latitude, longitude) {
+    $.ajax({
+        url: '/save_location',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            latitude: latitude,
+            longitude: longitude
+        }),
+        success: function(data) {
+            console.log('Location saved successfully:', data);
+        },
+        error: function(error) {
+            console.error('Error saving location:', error);
+            // If error with cached location, try to get fresh location
+            if (!position) {
+                getLocation();
+            }
+        }
+    });
 }
 
 function sendPosition(position) {
@@ -15,21 +69,16 @@ function sendPosition(position) {
     saveLocationToLocalStorage(latitude, longitude);
 
     // Send to backend
-    $.ajax({
-        url: '/save_location',
-        method: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            latitude: latitude,
-            longitude: longitude
-        }),
-        success: function(data) {
-            console.log('Success:', data);
-        },
-        error: function(error) {
-            console.error('Error:', error);
-        }
-    });
+    saveLocationToBackend(latitude, longitude);
+}
+
+function saveLocationToLocalStorage(latitude, longitude) {
+    const locationData = {
+        latitude: latitude,
+        longitude: longitude,
+        timestamp: new Date().getTime()
+    };
+    localStorage.setItem('user_location', JSON.stringify(locationData));
 }
 
 function showError(error) {
@@ -49,12 +98,34 @@ function showError(error) {
     }
 }
 
-function saveLocationToLocalStorage(latitude, longitude) {
-    localStorage.setItem('user_latitude', latitude);
-    localStorage.setItem('user_longitude', longitude);
+
+function getCachedLocation() {
+    try {
+        const cachedData = localStorage.getItem('user_location');
+        
+        if (cachedData) {
+            const locationData = JSON.parse(cachedData);
+            if (isValidCache(locationData)) {
+                console.log('Using cached location');
+                return {
+                    latitude: locationData.latitude,
+                    longitude: locationData.longitude
+                };
+            } else {
+                // Remove expired location cache
+                localStorage.removeItem('user_location');
+                console.log('Location cache expired');
+            }
+        }
+    } catch (error) {
+        console.error('Error reading location cache:', error);
+        localStorage.removeItem('user_location');
+    }
+    
+    return null;
 }
 
-// Cache Management Functions
+
 function getCacheKey(searchType, searchTerm) {
     return `search_cache_${searchType}_${searchTerm.toLowerCase().trim()}`;
 }
@@ -117,12 +188,16 @@ function setCachedResults(searchType, searchTerm, data) {
     }
 }
 
+
 function clearExpiredCache() {
     try {
+
+        // Get all keys in localStorage
         const keys = Object.keys(localStorage);
         const now = new Date().getTime();
         const twentyFourHours = 24 * 60 * 60 * 1000;
         
+        // Iterate through all keys in localStorage
         keys.forEach(key => {
             if (key.startsWith('search_cache_')) {
                 const cachedData = localStorage.getItem(key);
@@ -140,31 +215,4 @@ function clearExpiredCache() {
     }
 }
 
-// Initialize location on page load
-window.addEventListener('DOMContentLoaded', function() {
-    const savedLat = localStorage.getItem('user_latitude');
-    const savedLng = localStorage.getItem('user_longitude');
-    if (savedLat && savedLng) {
-        // Send saved location to backend automatically
-        $.ajax({
-            url: '/save_location',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                latitude: parseFloat(savedLat),
-                longitude: parseFloat(savedLng)
-            }),
-            success: function(data) {
-                console.log('Saved location loaded:', data);
-            },
-            error: function(error) {
-                console.error('Error loading saved location:', error);
-                // If error, get fresh location
-                getLocation();
-            }
-        });
-    } else {
-        // Prompt user for location if not saved
-        getLocation();
-    }
-}); 
+
