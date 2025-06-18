@@ -9,7 +9,7 @@ from pinecone import Pinecone
 from dotenv import load_dotenv
 import google.generativeai as genai
 from typing import List, Dict
-
+import difflib
 
 class course_search:
     """
@@ -51,6 +51,7 @@ class course_search:
         with open(courses_data_path, 'r') as json_file:
             self.courses_data = json.load(json_file)
 
+      
         self.community_colleges = {
              "Rowan College of South Jersey - Cumberland Campus": (39.4794, -75.0289),
              "Atlantic Cape Community College": (39.4572, -74.7229),
@@ -82,7 +83,14 @@ class course_search:
         self.build_course_mappings()
 
     def remove_em_tags(self, text):
-        """Remove <em> and </em> tags from text."""
+        """Remove <em> and </em> tags from text.
+        
+        Args:
+            text (str): The text to be cleaned.
+            
+        Returns:
+            str: The text with HTML em tags removed.
+        """
         if not text:
             return text
         return re.sub(r'</?em>', '', text)
@@ -125,6 +133,32 @@ class course_search:
                     if course_info not in self.instructors_courses[instructor_name]:
                         self.instructors_courses[instructor_name].append(course_info)
 
+    def _format_instructor_name(self, name) -> str:
+        """Formats instructor names into a more readable 'Firstname Lastname' format.
+        
+        Handles 'LASTNAME, FIRSTNAME' and 'LASTNAME' formats, and returns 'TBA' for unknown instructors.
+
+        Args:
+            name (str): The instructor's name as a string.
+
+        Returns:
+            str: The formatted name.
+        """
+        if not name or name == 'UNKNOWN':
+            return 'TBA'
+        
+        # Handle "LASTNAME, FIRSTNAME" format
+        if ',' in name:
+            parts = []
+            for p in name.split(','):
+                parts.append(p.strip())
+
+            if len(parts) == 2:
+                # Title-case both parts and join as "Firstname Lastname"
+                return f"{parts[1].title()} {parts[0].title()}"
+        
+        # Handle "LASTNAME" format (or any other format) by just title-casing it
+        return name.title()
 
     def generate_embeddings(self, text):
         """
@@ -153,10 +187,11 @@ class course_search:
         Search for courses based on a given text user inputs
 
         Args:
-            text (str): The text to search for.
+            query (str): The text to search for.
+            top_k (int): The number of top results to return.
 
         Returns:
-            list: top 10 courses matching the search query.
+            list: A list of course objects matching the search query.
         """
         try:
             # Generate the embedding for the search query
@@ -293,6 +328,7 @@ class course_search:
             course_titles = []
 
             for match in close_matches:
+                
                 # Remove colon from course code for lookup
                 course_code = match.get('courseString', '').replace(':', '')
                 matching_course = self.courses_by_code.get(course_code)
@@ -314,11 +350,11 @@ class course_search:
         Search for courses by code.
 
         Args:
-            code (str): Course code to search for
-            location (tuple, optional): User's location as (latitude, longitude) tuple
+            course_code (str): Course code to search for.
+            location (tuple, optional): User's location as (latitude, longitude) tuple.
 
         Returns:
-            list: List of course objects that match the code
+            list: List of course objects that match the code.
         """
         matching_courses = []
 
@@ -328,17 +364,82 @@ class course_search:
                 matching_courses.append(course_info)
 
         return matching_courses
-                
+
+    async def search_by_professor(self, professor_name: str) -> List[Dict]:
+        """Search for courses taught by a specific professor with suggestions.
+        
+        If an exact match is found, it returns the professor's courses. 
+        Otherwise, it provides a list of suggestions for similar names.
+        
+        Args:
+            professor_name (str): The name of the professor to search for.
+            
+        Returns:
+            list: A list of dictionaries, either containing professor data or suggestions.
+        """
+        search_term = professor_name.lower().strip()
+        
+        if not search_term:
+            return []
+
+        # Find professors where the search term is part of their name
+        exact_matches = []
+        for prof in self.instructors_courses.keys():
+            if search_term in prof.lower():
+                exact_matches.append(prof)
+
+        # If we found direct matches, return their data
+        if exact_matches:
+            results = []
+            for prof_name in exact_matches:
+                results.append({
+                    'professor': self._format_instructor_name(prof_name),
+                    'courses': self.instructors_courses.get(prof_name, [])
+                })
+            return results
+
+        # If no direct matches, find suggestions
+        suggestions = self._find_similar_professors(search_term)
+        if suggestions:
+            formatted_suggestions = []
+            for s in suggestions:
+                formatted_suggestions.append(self._format_instructor_name(s))
+            return [{
+                'professor': 'No exact match found',
+                'suggestions': formatted_suggestions,
+                'message': f'No professor found with name "{professor_name}". Did you mean one of these?'
+            }]
+            
+        return []
+
+    def _find_similar_professors(self, name: str, threshold=0.7) -> List[str]:
+        """Finds professors with names similar to the search term using difflib.
+        
+        Args:
+            name (str): The name to find similarities for.
+            threshold (float): The cutoff for similarity score (0.0 to 1.0).
+            
+        Returns:
+            list: A list of names deemed similar to the input name.
+        """
+   
+        all_professors = list(self.instructors_courses.keys())
+        
+        # Get close matches using difflib
+        similar_matches = difflib.get_close_matches(name, all_professors, n=5, cutoff=threshold)
+        
+        return similar_matches
 
     async def extract_course_data(self, course, your_location):
         """
         Extract course data from a course object.
 
         Args:
-           matching_courses (list): List of course objects to extract data from
+           course (dict): A course object to extract data from.
+           your_location (tuple): The user's current location for distance calculations.
 
         Returns:
-            dict: Extracted course data that contains the course number, title, prerequisites, and instructors
+            dict: Extracted course data that contains the course number, title, prerequisites, and instructors.
         """
         try:
             course_string = course.get('courseString')
@@ -356,10 +457,14 @@ class course_search:
                 instructor_for_section = section.get('instructors', [])
 
                 if not instructor_for_section:
-                    instructor_for_section = [{'name': 'UNKNOWN'}]
-
-                if instructor_for_section not in instructors_for_course:
-                    instructors_for_course.append(instructor_for_section)
+                    instructors_for_course.append([{'name': 'TBA'}])
+                else:
+                    formatted_instructors = []
+                    for i in instructor_for_section:
+                        formatted_instructors.append({'name': self._format_instructor_name(i['name'])})
+                    
+                    if formatted_instructors not in instructors_for_course:
+                        instructors_for_course.append(formatted_instructors)
 
             course_code = course_string.replace(':', '')
 
@@ -386,7 +491,14 @@ class course_search:
             raise
 
     def get_course_instructors(self, course_code: str) -> List[str]:
-        """Get all instructors for a specific course."""
+        """Get all instructors for a specific course.
+        
+        Args:
+            course_code (str): The course code (e.g., '01198111') to look up.
+            
+        Returns:
+            list: A list of instructor names for the given course.
+        """
         if course_code not in self.courses_by_code:
             return []
 
@@ -403,6 +515,7 @@ class course_search:
 
 # Main function to test searching by title, code, and professor. 
 async def main():
+    """A main function for testing the search functionalities of the controller."""
 
     # Initialize the course_search controller with the path to your course data JSON
     # course_search_controller = course_search(courses_data_path='data/rutgers_courses.json')

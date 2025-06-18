@@ -1,10 +1,16 @@
 let currentSearchType = 'title'; 
 
 $(document).ready(function() {
+    
     // Event listeners for search type toggles
     $('#toggle-course-title').on('change', function() {
     currentSearchType = 'title';
         $('#search-bar').attr('placeholder', "Enter course title (e.g., Calculus)");
+});
+
+    $('#toggle-professor').on('change', function() {
+    currentSearchType = 'professor';
+        $('#search-bar').attr('placeholder', "Enter professor last name (e.g., Smith)");
 });
 
     $('#toggle-course-code').on('change', function() {
@@ -56,6 +62,9 @@ function search() {
         case 'title':
             endpoint = '/search_by_title';
             break;
+        case 'professor':
+            endpoint = '/search_by_professor';
+            break;
         case 'code':
             endpoint = '/search_by_code';
             break;
@@ -74,14 +83,22 @@ function search() {
             return;
         }
         
-        if (data.courses && data.courses.length > 0) {
-            displayCourses(data.courses);
-            // Cache the results
-            setCachedResults(currentSearchType, searchTerm, data.courses);
-        } else {
-                $resultsContainer.html('<p class="no-results">No courses found matching your search.</p>');
-            // Cache empty results too
-            setCachedResults(currentSearchType, searchTerm, []);
+        if (currentSearchType === 'title' || currentSearchType === 'code') {
+            if (data.courses && data.courses.length > 0) {
+                displayCourses(data.courses);
+                // Cache the results
+                setCachedResults(currentSearchType, searchTerm, data.courses);
+            } else {
+                    $resultsContainer.html('<p class="no-results">No courses found matching your search.</p>');
+                // Cache empty results too
+                setCachedResults(currentSearchType, searchTerm, []);
+            }
+        } else { // Professor searches - no caching
+            if (data.results && data.results.length > 0) {
+                displayProfessorResults(data.results);
+            } else {
+                $resultsContainer.html('<p class="no-results">No professors found matching your search.</p>');
+            }
         }
         },
         error: function(error) {
@@ -195,5 +212,58 @@ function displayCourses(courses) {
             .addClass('no-results')
             .text('No courses found matching your search.');
         $coursesContainer.append($messageElement);
+    }
+}
+
+function displayProfessorResults(results) {
+    const $coursesContainer = $('#search-results');
+    $coursesContainer.empty();
+
+    if (!results || results.length === 0) {
+        $coursesContainer.html('<p class="no-results">No professors found matching your search.</p>');
+        return;
+    }
+
+    // Check if the result is a suggestion object
+    const firstResult = results[0];
+    if (firstResult.suggestions && Array.isArray(firstResult.suggestions)) {
+        const $suggestionsDiv = $('<div>').addClass('course suggestions-container');
+        const $messageDiv = $('<div>').addClass('suggestions-message').text(firstResult.message);
+        const $suggestionsList = $('<div>').addClass('suggestions-list');
+
+        firstResult.suggestions.forEach(suggestion => {
+            const $suggestionItem = $('<div>')
+                .addClass('suggestion-item')
+                .text(suggestion)
+                .on('click', function() {
+                    $('#search-bar').val(suggestion);
+                    search();
+                });
+            $suggestionsList.append($suggestionItem);
+        });
+
+        $suggestionsDiv.append($messageDiv, $suggestionsList);
+        $coursesContainer.append($suggestionsDiv);
+    } else {
+        // Otherwise, display the list of matched professors and their courses
+        results.forEach(result => {
+            if (result.professor && result.courses) {
+                const $professorDiv = $('<div>').addClass('course');
+                const $professorName = $('<h3>').text(result.professor);
+                const $coursesList = $('<div>');
+
+                if (result.courses.length > 0) {
+                    result.courses.forEach(course => {
+                        const $courseInfo = $('<p>').text(`${course.courseString} - ${course.title}`);
+                        $coursesList.append($courseInfo);
+                    });
+                } else {
+                    $coursesList.append($('<p>').text('No courses found for this professor.'));
+                }
+
+                $professorDiv.append($professorName, $coursesList);
+                $coursesContainer.append($professorDiv);
+            }
+        });
     }
 } 
