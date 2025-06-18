@@ -7,11 +7,6 @@ $(document).ready(function() {
         $('#search-bar').attr('placeholder', "Enter course title (e.g., Calculus)");
 });
 
-    $('#toggle-professor').on('change', function() {
-    currentSearchType = 'professor';
-        $('#search-bar').attr('placeholder', "Enter professor last name (e.g., Smith)");
-});
-
     $('#toggle-course-code').on('change', function() {
     currentSearchType = 'code';
         $('#search-bar').attr('placeholder', "Enter last 3 digits of course code (e.g., 101)");
@@ -39,25 +34,17 @@ function search() {
         return;
     }
 
-    // Check cache first
-    const cachedResults = getCachedResults(currentSearchType, searchTerm);
-    if (cachedResults) {
-        // Cache for course searches
-        if (currentSearchType === 'title' || currentSearchType === 'code') {
+    // Check cache first (only for course searches, not professor searches)
+    if (currentSearchType === 'title' || currentSearchType === 'code') {
+        const cachedResults = getCachedResults(currentSearchType, searchTerm);
+        if (cachedResults) {
             if (cachedResults.length > 0) {
                 displayCourses(cachedResults);
             } else {
                 $resultsContainer.html('<p class="no-results">No courses found matching your search.</p>');
             }
-        // Cache for professor searches
-        } else { 
-            if (cachedResults.length > 0) {
-                displayProfessorResults(cachedResults);
-            } else {
-                $resultsContainer.html('<p class="no-results">No professors found matching your search.</p>');
-            }
+            return;
         }
-        return;
     }
 
     // No valid cache, make API call
@@ -68,9 +55,6 @@ function search() {
     switch(currentSearchType) {
         case 'title':
             endpoint = '/search_by_title';
-            break;
-        case 'professor':
-            endpoint = '/search_by_professor';
             break;
         case 'code':
             endpoint = '/search_by_code';
@@ -90,26 +74,14 @@ function search() {
             return;
         }
         
-        if (currentSearchType === 'title' || currentSearchType === 'code') {
-            if (data.courses && data.courses.length > 0) {
-                displayCourses(data.courses);
-                // Cache the results
-                setCachedResults(currentSearchType, searchTerm, data.courses);
-            } else {
-                    $resultsContainer.html('<p class="no-results">No courses found matching your search.</p>');
-                // Cache empty results too
-                setCachedResults(currentSearchType, searchTerm, []);
-            }
+        if (data.courses && data.courses.length > 0) {
+            displayCourses(data.courses);
+            // Cache the results
+            setCachedResults(currentSearchType, searchTerm, data.courses);
         } else {
-            if (data.results && data.results.length > 0) {
-                displayProfessorResults(data.results);
-                // Cache the results
-                setCachedResults(currentSearchType, searchTerm, data.results);
-            } else {
-                    $resultsContainer.html('<p class="no-results">No professors found matching your search.</p>');
-                // Cache empty results too
-                setCachedResults(currentSearchType, searchTerm, []);
-            }
+                $resultsContainer.html('<p class="no-results">No courses found matching your search.</p>');
+            // Cache empty results too
+            setCachedResults(currentSearchType, searchTerm, []);
         }
         },
         error: function(error) {
@@ -222,35 +194,6 @@ function displayCourses(courses) {
         const $messageElement = $('<div>')
             .addClass('no-results')
             .text('No courses found matching your search.');
-        $coursesContainer.append($messageElement);
-    }
-}
-
-function displayProfessorResults(results) {
-    const $coursesContainer = $('#search-results');
-    $coursesContainer.empty();
-
-    if (results.length > 0) {
-        results.forEach(result => {
-
-            if (result.professor && result.courses && result.suggestions.length > 0) {
-                const $professorDiv = $('<div>').addClass('course');
-                const $professorName = $('<h3>').text(result.professor);
-                const $coursesList = $('<div>');
-
-                result.courses.forEach(course => {
-                    const $courseInfo = $('<p>').text(`${course.courseString} - ${course.title}`);
-                    $coursesList.append($courseInfo);
-                });
-
-                $professorDiv.append($professorName, $coursesList);
-                $coursesContainer.append($professorDiv);
-            }
-        });
-    } else {
-        const $messageElement = $('<p>')
-            .addClass('no-results')
-            .text('No professors found.');
         $coursesContainer.append($messageElement);
     }
 } 

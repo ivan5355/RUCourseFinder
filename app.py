@@ -139,46 +139,6 @@ async def search_by_code(request: Request):
             'message': f'An error occurred: {str(e)}'
         }
 
-@app.post("/search_by_professor")
-async def search_by_professor(request: Request):
-    """
-    Handles search requests for courses by professor name.
-
-    Expects a POST request with JSON payload containing 'searchTerm' for professor name.
-    Returns a list of professors and their courses that match the search term.
-
-    Returns:
-        JSON response containing matching professors and their courses
-    """
-
-    try:
-        
-        data = await request.json()
-        search_term = data.get('searchTerm')
-        
-        if not search_term:
-            return {'status': 'error', 'message': 'Professor name is required'}
-
-        results = courses_controller.search_by_professor(search_term)
-
-        if not results:
-            return {
-                'status': 'success',
-                'message': 'No results found',
-                'results': []
-            }
-        
-        return {
-            'searchTerm': search_term,
-            'results': results
-         }
-    
-    except Exception as e:
-        return {
-            'status': 'error',
-            'message': f'An error occurred: {str(e)}'
-        }
-
 if __name__ == '__main__':
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=5005)  
