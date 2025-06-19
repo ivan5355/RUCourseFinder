@@ -175,6 +175,7 @@ function setCachedResults(searchType, searchTerm, data) {
         console.log('Cached results for:', searchTerm);
     } catch (error) {
         console.error('Error saving to cache:', error);
+        
         // If storage is full, clear old cache entries
         if (error.name === 'QuotaExceededError') {
             clearExpiredCache();

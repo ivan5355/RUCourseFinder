@@ -16,6 +16,7 @@ templates = Jinja2Templates(directory="templates")
 courses_controller = course_search(courses_data_path='data/rutgers_courses.json')
 
 your_location = None
+college_distances = None
 
 @app.get("/", response_class=HTMLResponse)
 async def search_page(request: Request):
@@ -37,6 +38,10 @@ async def save_location(request: Request):
     longitude = data.get('longitude')
     global your_location
     your_location = (latitude, longitude)
+
+    global college_distances
+    college_distances = await courses_controller.get_all_college_distances(your_location)
+
     return {
         'status': 'success', 
         'latitude': latitude, 
@@ -74,7 +79,7 @@ async def search_by_title(request: Request):
 
         # Gets the top courses, along with their course info(title, course_string, instructors, prerequisites, equivalencies)
         # that most closely macthes the title the user search
-        results = await courses_controller.search_by_title(search_term, your_location)
+        results = await courses_controller.search_by_title(search_term, college_distances)
 
         if not results:
             return {
@@ -118,7 +123,7 @@ async def search_by_code(request: Request):
             return {'status': 'error', 'message': 'Location not set'}
 
         # returns all courses and their course info that ends with the 3 digits the user specifies 
-        results = await courses_controller.search_by_code(search_term, your_location)
+        results = await courses_controller.search_by_code(search_term, college_distances)
 
         if not results:
             return {
@@ -147,6 +152,7 @@ async def search_by_professor(request: Request):
     Expects a POST request with JSON payload containing 'searchTerm'.
     Returns a list of professors and their courses, or suggestions.
     """
+
     try:
         data = await request.json()
         search_term = data.get('searchTerm')
