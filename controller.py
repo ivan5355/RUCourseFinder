@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 from typing import List, Dict
 import difflib
+import math
 
 class course_search:
     """
@@ -195,6 +196,7 @@ class course_search:
             list: A list of course objects matching the search query.
         """
         try:
+
             # Generate the embedding for the search query
             query_embedding = self.generate_embeddings(query)
 
@@ -210,8 +212,10 @@ class course_search:
 
             # Get course codes from matches (Pinecone returns course codes as IDs)
             course_codes = []
+
             for match in result['matches']:
                 course_code = match['id']  # This is actually a course code like "01:198:111"
+
                 # Remove colon for lookup in courses_by_code
                 clean_code = course_code.replace(':', '')
                 course_codes.append(clean_code)
@@ -240,8 +244,9 @@ class course_search:
             float: The driving distance between the two locations in miles.
         """
         
+        # If we are missing coordinates, return None so it can be serialized safely
         if your_location is None or college_data is None:
-            return float('inf')
+            return None
 
         community_college_location = college_data
         
@@ -334,7 +339,12 @@ class course_search:
         # Use precomputed distances to save computation time
         distances = []
         for college in equivalencies['community_college']:
-            distances.append(college_distances.get(college, float('inf')))
+            dist = college_distances.get(college)
+            # Replace infinite or missing distances with None so they serialize to null in JSON
+            if dist is None or (isinstance(dist, (int, float)) and math.isinf(dist)):
+                distances.append(None)
+            else:
+                distances.append(dist)
     
         equivalencies['Distance'] = distances
         
@@ -346,8 +356,13 @@ class course_search:
             college = row['community_college']
             if college not in unique_colleges:
                 unique_colleges.add(college)
-                top_5.append(row.to_dict())
-            
+
+                row_data = row.to_dict()
+                # Convert pandas NaN to None for JSON safety
+                if pd.isna(row_data.get('Distance')):
+                    row_data['Distance'] = None
+
+                top_5.append(row_data)
                 if len(top_5) == 5:
                     break
 
@@ -553,7 +568,9 @@ class course_search:
         sections = course.get('sections', [])
         instructors_for_course = []
 
+        # Loops through each section to extract the instructors
         for section in sections:
+
             instructor_for_section = section.get('instructors', [])
             if instructor_for_section not in instructors_for_course:
                 instructors_for_course.append(instructor_for_section)
