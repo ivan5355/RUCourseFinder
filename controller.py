@@ -84,6 +84,7 @@ class course_search:
 
         self.build_course_mappings()
 
+    # remove em tags from text
     def remove_em_tags(self, text):
         """Remove <em> and </em> tags from text.
         
@@ -97,6 +98,7 @@ class course_search:
             return text
         return re.sub(r'</?em>', '', text)
 
+    # build course mappings
     def build_course_mappings(self):
         """
         Build internal mappings for courses, titles, and instructors.
@@ -135,6 +137,7 @@ class course_search:
                     if course_info not in self.instructors_courses[instructor_name]:
                         self.instructors_courses[instructor_name].append(course_info)
 
+    # format instructor name
     def _format_instructor_name(self, name) -> str:
         """Formats instructor names into a more readable 'Firstname Lastname' format.
         
@@ -184,6 +187,7 @@ class course_search:
             # Fallback to zeros if embedding fails
             return np.zeros(768)  # text-embedding-004 has 768 dimensions
 
+    # search courses by title
     def search_courses(self, query, top_k):
         """
         Search for courses based on a given text user inputs
@@ -232,6 +236,7 @@ class course_search:
             print(f"Error in search_courses: {str(e)}")
             return []
 
+    # get distance between two locations
     async def get_distance(self, your_location, college_data):
         """
         Calculate the driving distance between two locations using the Mapbox Directions API.
@@ -315,6 +320,7 @@ class course_search:
 
         return college_distances
 
+    # get top 5 course equivalencies by distance
     async def get_top_5_course_equivalencies_by_distance(self, course_code, college_distances):
         """
         Find top 5 course equivalencies sorted by distance from user's location.
@@ -407,6 +413,7 @@ class course_search:
             print(f"Error in search_by_title: {str(e)}")
             raise
 
+    # search by course code
     async def search_by_code(self, course_code, college_distances):
         """
         Search for courses by code.

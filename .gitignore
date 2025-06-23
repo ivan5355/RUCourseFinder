@@ -4,8 +4,5 @@ myenv/
 __pycache__
 course_equivalencies/
 venv/
-
-
-templates/recommendations.html
-content_based_recommender.py
+data/
 
