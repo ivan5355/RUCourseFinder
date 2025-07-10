@@ -14,7 +14,6 @@ def get_current_semester():
     current_year = current_date.year
     current_month = current_date.month
 
-    
     def term_exists(year, term):
         """Check if course data exists for a given year/term without downloading all data."""
         url = "https://classes.rutgers.edu/soc/api/courses.json"

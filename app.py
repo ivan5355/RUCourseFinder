@@ -6,7 +6,7 @@ from controller import course_search
 import os
 import uvicorn
 
-app = FastAPI()
+app = FastAPI(debug=True)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -19,14 +19,13 @@ courses_controller = course_search(courses_data_path='data/rutgers_courses.json'
 your_location = None
 college_distances = None
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for monitoring and load balancers."""
-    return {"status": "healthy", "message": "Rutgers Course Finder is running"}
 
 @app.get("/", response_class=HTMLResponse)
 async def search_page(request: Request):
-    return templates.TemplateResponse("main.html", {"request": request})
+    return templates.TemplateResponse("main.html", {
+        "request": request,
+        "semester_info": courses_controller.semester_info
+    })
 
 @app.post("/save_location")
 async def save_location(request: Request):
@@ -167,7 +166,7 @@ async def search_by_professor(request: Request):
         if not search_term:
             return {'status': 'error', 'message': 'Search term is required'}
         
-        results = courses_controller.search_by_professor(search_term)
+        results = await courses_controller.search_by_professor(search_term)
         
         return {
             'status': 'success',
