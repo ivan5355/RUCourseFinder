@@ -67,16 +67,16 @@ body {
 
 .navbar-top {
    display: flex;
-   justify-content: space-between;
+   justify-content: center;
    align-items: center;
-   margin-bottom: 1rem;
 }
 
 .navbar-brand {
    color: white;
    text-decoration: none;
    font-size: 2rem;
-   font-weight: 700;
+   font-weight: bold;
+   text-align: center;
 }
 
 .navbar-links {
@@ -111,14 +111,9 @@ body {
 }
 
 .navbar-description p {
-   font-size: 12px;
-   color: #6b7280;
-   font-style: italic;
+   color: white;
    margin: 0;
-}
-
-.disclaimer-text {
-    color: #fff !important;
+   font-size: 14px;
 }
 
 .container {
@@ -489,36 +484,39 @@ h3 {
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(204, 0, 51, 0.3);
 }
- 
 
-.semester-badge {
-   display: inline-flex;
-   align-items: center;
-   gap: 8px;
-   background: rgba(255, 255, 255, 0.95);
-   padding: 8px 16px;
-   border-radius: 20px;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-   backdrop-filter: blur(10px);
-   border: 1px solid rgba(255, 255, 255, 0.2);
+/* Professor Suggestions Styles */
+.suggestions-container {
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
 }
 
-.semester-badge .fas {
-   color: #cc0033;
-   font-size: 14px;
-}
-
-.semester-name {
-   color: #1f2937;
-   font-weight: 600;
-   font-size: 14px;
-}
-
-p {
+.suggestions-message {
+    font-size: 1.1rem;
     margin-bottom: 1rem;
+    color: #495057;
+    font-weight: 500;
 }
 
-p strong {
-    font-weight: 600;
+.suggestions-list h4 {
+    margin: 0.5rem 0;
+    color: #343a40;
+    font-size: 1rem;
 }
 
+.suggestion-item {
+    background: #e9ecef;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid #ced4da;
+}
+
+.suggestion-item:hover {
+    background: #cc0033;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(204, 0, 51, 0.3);
+} 

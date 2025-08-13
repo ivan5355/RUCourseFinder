@@ -53,10 +53,7 @@ class course_search:
         with open(courses_data_path, 'r') as json_file:
             self.courses_data = json.load(json_file)
 
-        # Extract semester information from course data
-        self.semester_info = self._extract_semester_info()
-
-        # Initialize course mappings and community colleges data
+      
         self.community_colleges = {
              "Rowan College of South Jersey - Cumberland Campus": (39.4794, -75.0289),
              "Atlantic Cape Community College": (39.4572, -74.7229),
@@ -86,54 +83,6 @@ class course_search:
         self.instructors_courses = {}
 
         self.build_course_mappings()
-
-    def _extract_semester_info(self):
-        """
-        Extract semester and year information from course data.
-        
-        Returns:
-            dict: Dictionary containing year, term, and formatted semester name
-        """
-        if not self.courses_data:
-            return {"year": None, "term": None, "semester_name": "Unknown"}
-        
-        # Look at the first course with coreCodes to get semester info
-        for course in self.courses_data:
-            core_codes = course.get('coreCodes', [])
-            if core_codes:
-                first_core = core_codes[0]
-                year = first_core.get('year')
-                term = first_core.get('term')
-                
-                if year and term:
-                    semester_name = self._format_semester_name(year, term)
-                    return {
-                        "year": year,
-                        "term": term,
-                        "semester_name": semester_name
-                    }
-        
-        return {"year": None, "term": None, "semester_name": "Unknown"}
-
-    def _format_semester_name(self, year, term):
-        """
-        Format semester name from year and term code.
-        
-        Args:
-            year (str): Year (e.g., "2025")
-            term (str): Term code ("1" = Spring, "7" = Summer, "9" = Fall)
-            
-        Returns:
-            str: Formatted semester name (e.g., "Spring 2025")
-        """
-        term_map = {
-            "1": "Spring",
-            "7": "Summer", 
-            "9": "Fall"
-        }
-        
-        term_name = term_map.get(term, f"Term {term}")
-        return f"{term_name} {year}"
 
     # remove em tags from text
     def remove_em_tags(self, text):
