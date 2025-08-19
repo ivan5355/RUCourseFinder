@@ -22,6 +22,15 @@ $(document).ready(function() {
     $('#search-form').on('submit', function(event) {
         event.preventDefault();
         clearSearch();
+
+        // If no cached location, request it now (user gesture) and halt search
+        const cachedLocation = getCachedLocation();
+        if (!cachedLocation) {
+            $('#search-results').html('<p class="error-message">Please allow location access to enable distance-based results. A browser prompt should appear now.</p>');
+            getLocation();
+            return;
+        }
+
         search();
     });
 });
@@ -79,7 +88,13 @@ function search() {
         data: JSON.stringify({ searchTerm: searchTerm }),
         success: function(data) {
         if (data.status === 'error') {
-                $resultsContainer.html(`<p class="error-message">${data.message}</p>`);
+                const $resultsContainer = $('#search-results');
+                if (data.message === 'Location not set') {
+                    $resultsContainer.html('<p class="error-message">Location is required for searches. Please allow location access in the browser prompt.</p>');
+                    getLocation();
+                } else {
+                    $resultsContainer.html(`<p class="error-message">${data.message}</p>`);
+                }
             return;
         }
         

@@ -16,30 +16,26 @@
 
 // Initialize location on page load
 window.addEventListener('DOMContentLoaded', function() {
-    // Check if valid location is cached
+    // Initialize location
     const cachedLocation = getCachedLocation();
 
-    // If valid location exists, send to backend
     if (cachedLocation) {
-        saveLocationToBackend(cachedLocation.latitude, cachedLocation.longitude);
+        saveLocationToBackend(cachedLocation.latitude, cachedLocation.longitude, true);
     } else {
-        // No valid cached location, prompt user for fresh location
         getLocation();
     }
 }); 
 
 function getLocation() {
     if (navigator.geolocation) {
-
-        //position argument is implicitly passed to sendPosition
         navigator.geolocation.getCurrentPosition(sendPosition, showError);
     } else {
-        $("#location").html("Geolocation is not supported by this browser.");
+        $('#search-results').html('<p class="error-message">Geolocation is not supported by this browser.</p>');
     }
 }
 
 // Send location to backend
-function saveLocationToBackend(latitude, longitude) {
+function saveLocationToBackend(latitude, longitude, isFromCache = false) {
     $.ajax({
         url: '/save_location',
         method: 'POST',
@@ -53,8 +49,7 @@ function saveLocationToBackend(latitude, longitude) {
         },
         error: function(error) {
             console.error('Error saving location:', error);
-            // If error with cached location, try to get fresh location
-            if (!position) {
+            if (isFromCache) {
                 getLocation();
             }
         }
@@ -69,7 +64,7 @@ function sendPosition(position) {
     saveLocationToLocalStorage(latitude, longitude);
 
     // Send to backend
-    saveLocationToBackend(latitude, longitude);
+    saveLocationToBackend(latitude, longitude, false);
 }
 
 function saveLocationToLocalStorage(latitude, longitude) {
@@ -82,20 +77,22 @@ function saveLocationToLocalStorage(latitude, longitude) {
 }
 
 function showError(error) {
+    let message = '';
     switch(error.code) {
         case error.PERMISSION_DENIED:
-            $("#location").html("User denied the request for Geolocation.");
+            message = "User denied the request for Geolocation. Please enable location access in browser settings to use search features.";
             break;
         case error.POSITION_UNAVAILABLE:
-            $("#location").html("Location information is unavailable.");
+            message = "Location information is unavailable.";
             break;
         case error.TIMEOUT:
-            $("#location").html("The request to get user location timed out.");
+            message = "The request to get user location timed out.";
             break;
         case error.UNKNOWN_ERROR:
-            $("#location").html("An unknown error occurred.");
+            message = "An unknown error occurred while getting location.";
             break;
     }
+    $('#search-results').html(`<p class="error-message">${message}</p>`);
 }
 
 
