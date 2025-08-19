@@ -1,0 +1,17 @@
+name: rucoursefinder
+services:
+- name: web
+  source_dir: /
+  github:
+    repo: your-username/RUCourseFinder
+    branch: main
+  run_command: gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT app:app
+  environment_slug: python
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  routes:
+  - path: /
+  envs:
+  - key: PORT
+    scope: RUN_TIME
+    value: "8080" 
