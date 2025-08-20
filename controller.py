@@ -387,7 +387,7 @@ class course_search:
         """
         try:
             
-            close_matches = self.search_courses(title, top_k = 5)
+            close_matches = self.search_courses(title, top_k = 8)
             
 
             matching_courses = []

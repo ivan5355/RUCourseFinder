@@ -78,21 +78,55 @@ function saveLocationToLocalStorage(latitude, longitude) {
 
 function showError(error) {
     let message = '';
+    let extraHtml = '';
     switch(error.code) {
         case error.PERMISSION_DENIED:
-            message = "User denied the request for Geolocation. Please enable location access in browser settings to use search features.";
+            message = 'Location access was denied.';
+            extraHtml = `
+                <div class="error-actions" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button id="retry-location">Retry</button>
+                    <button id="enter-manual-location">Enter location manually</button>
+                </div>
+                <details style="margin-top:8px;">
+                    <summary>How to enable location</summary>
+                    <ul style="margin:6px 0 0 18px;">
+                        <li>Chrome: Click the lock icon in the address bar → Site settings → Location: Allow → Reload.</li>
+                        <li>Safari (macOS): Safari → Settings… → Websites → Location → Allow for this site → Reload.</li>
+                    </ul>
+                </details>`;
             break;
         case error.POSITION_UNAVAILABLE:
-            message = "Location information is unavailable.";
+            message = 'Location information is unavailable.';
             break;
         case error.TIMEOUT:
-            message = "The request to get user location timed out.";
+            message = 'The request to get user location timed out.';
             break;
         case error.UNKNOWN_ERROR:
-            message = "An unknown error occurred while getting location.";
+            message = 'An unknown error occurred while getting location.';
             break;
     }
-    $('#search-results').html(`<p class="error-message">${message}</p>`);
+
+    const content = `<div class="error-message"><p>${message}</p>${extraHtml}</div>`;
+    $('#search-results').html(content);
+
+    // Attach handlers if buttons are present
+    $('#retry-location').on('click', function() {
+        getLocation();
+    });
+
+    $('#enter-manual-location').on('click', function() {
+        const latStr = prompt('Enter latitude (e.g., 40.7128)');
+        const lonStr = prompt('Enter longitude (e.g., -74.0060)');
+        const lat = parseFloat(latStr);
+        const lon = parseFloat(lonStr);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+            saveLocationToLocalStorage(lat, lon);
+            saveLocationToBackend(lat, lon, false);
+            $('#search-results').html('<p class="success-message">Location saved. You can now run your search.</p>');
+        } else {
+            alert('Invalid coordinates. Please try again.');
+        }
+    });
 }
 
 
