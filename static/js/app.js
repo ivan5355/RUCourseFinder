@@ -63,7 +63,7 @@ function search() {
     }
 
     // No valid cache, make API call
-    $loadingElement.show();
+    $loadingElement.css('display', 'flex');
     $resultsContainer.empty();
 
     let endpoint;

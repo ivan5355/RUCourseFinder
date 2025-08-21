@@ -6,7 +6,7 @@
     <title>RUCourseFinder</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/main.css?v=2">
+    <link rel="stylesheet" href="/static/css/main.css?v=6">
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-Z9RFLM5XHG"></script>
@@ -27,7 +27,7 @@
             </div>
             <div class="navbar-description">
                 <h3>
-                    Unlike WebReg, this platform allows you to search courses by title (leveraging vector embeddings for semantic search), professor, and course code, while also finding equivalent Rutgers courses from New Jersey's community colleges with ease.
+                    Unlike WebReg, this platform allows you to search courses by semantic meaning rather than keyword, while also finding equivalent Rutgers courses from New Jersey's community colleges with ease.
                 </h3>
                 <p><strong>Disclaimer:</strong> This platform is not affiliated with Rutgers University.</p>
             </div>
@@ -37,25 +37,26 @@
     <div class="container">
         <form id="search-form">
             <div class="form-group">
-                <div class="toggle-container">
-                    <label for="toggle-course-title">
-                        <input type="radio" name="search-option" id="toggle-course-title" class="toggle-radio" checked> Search by Course Title
-                    </label>
-                    <label for="toggle-professor">
-                        <input type="radio" name="search-option" id="toggle-professor" class="toggle-radio"> Search Courses by Professor
-                    </label>
-                    <label for="toggle-course-code">
-                        <input type="radio" name="search-option" id="toggle-course-code" class="toggle-radio"> Search by Course Code
-                    </label>
+                <div class="search-controls-container">
+                    <div class="toggle-container">
+                        <label for="toggle-course-title">
+                            <input type="radio" name="search-option" id="toggle-course-title" class="toggle-radio" checked> Search by Course Title
+                        </label>
+                        <label for="toggle-professor">
+                            <input type="radio" name="search-option" id="toggle-professor" class="toggle-radio"> Search Courses by Professor
+                        </label>
+                        <label for="toggle-course-code">
+                            <input type="radio" name="search-option" id="toggle-course-code" class="toggle-radio"> Search by Course Code
+                        </label>
+                    </div>
+                    <div class="search-input-container">
+                        <input type="text" id="search-bar" placeholder="Enter course title (e.g., Calc 2)" />
+                        <button type="submit" id="search-button">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <input type="text" id="search-bar" placeholder="Enter course title (e.g., Calc 2)" />
-            </div>
-            <div class="form-group">
-                <button type="submit" id="search-button">
-                    <i class="fas fa-search"></i> Search
-                </button>
+                <div class="form-hint">Tip: Avoid vague queries like "computer". Be specific, e.g., "Introduction to Computer Science" or "Calc 2".</div>
             </div>
         </form>
     </div>
@@ -68,7 +69,7 @@
     <div id="search-results"></div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="/static/js/utils.js?v=2"></script>
-    <script src="/static/js/app.js?v=2"></script>
+    <script src="/static/js/utils.js?v=3"></script>
+    <script src="/static/js/app.js?v=3"></script>
 </body>
 </html> 

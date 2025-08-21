@@ -133,21 +133,64 @@ h3 {
    margin-top: 0;
 }
 
+/* Search form layout */
 #search-form {
    display: flex;
-   justify-content: center;
+   flex-direction: column;
    align-items: center;
    margin: 40px 0;
+   gap: 10px;
+}
+
+.form-group {
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   width: 100%;
+   max-width: 1000px;
+}
+
+.search-controls-container {
+   display: flex;
+   align-items: center;
+   gap: 20px;
+   width: 100%;
+   margin-bottom: 8px;
 }
 
 .toggle-container {
-   margin-right: 10px;
+   display: flex;
+   flex-direction: row;
+   flex-wrap: wrap;
+   gap: 15px;
+   min-width: 200px;
 }
 
+.toggle-container label {
+   display: flex;
+   align-items: center;
+   gap: 5px;
+   font-size: 14px;
+   color: var(--gray-700);
+   cursor: pointer;
+   white-space: nowrap;
+}
+
+.toggle-radio {
+   margin: 0;
+}
+
+.search-input-container {
+   display: flex;
+   flex: 1;
+   max-width: 600px;
+}
+
+
+
 #search-bar {
-   width: 400px;
+   flex: 1;
    padding: 12px;
-   margin-top: -10px;
    font-size: 16px;
    border: 1px solid #ddd;
    border-radius: 4px 0 0 4px;
@@ -156,7 +199,6 @@ h3 {
 
 #search-button {
    padding: 12px 20px;
-   margin-top: -10px;
    font-size: 16px;
    background-color: #cc0033;
    color: white;
@@ -164,6 +206,7 @@ h3 {
    border-radius: 0 4px 4px 0;
    cursor: pointer;
    transition: background-color 0.3s;
+   white-space: nowrap;
 }
 
 #search-button:hover {
@@ -172,8 +215,16 @@ h3 {
 
 .loading {
    display: none;
-   margin-top: 20px;
-   text-align: center;
+   position: fixed;
+   top: 0;
+   left: 0;
+   right: 0;
+   bottom: 0;
+   background: rgba(255,255,255,0.8);
+   z-index: 9999;
+   align-items: center;
+   justify-content: center;
+   flex-direction: column;
 }
 
 .spinner {
@@ -394,6 +445,31 @@ h3 {
        padding: 0 10px;
    }
 
+   /* Stack everything vertically on mobile */
+   .search-controls-container {
+       flex-direction: column;
+       gap: 15px;
+       align-items: stretch;
+   }
+
+   .toggle-container {
+       min-width: auto;
+   }
+
+   .search-input-container {
+       flex-direction: column;
+       gap: 8px;
+       max-width: 100%;
+   }
+
+   #search-bar {
+       border-radius: 4px;
+   }
+
+   #search-button {
+       border-radius: 4px;
+   }
+
    .course {
        padding: 6px;
        margin-bottom: 6px;
@@ -519,4 +595,10 @@ h3 {
     color: white;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(204, 0, 51, 0.3);
+}
+
+.form-hint {
+	margin-top: 6px;
+	font-size: 12px;
+	color: var(--gray-600);
 } 
