@@ -220,7 +220,7 @@ h3 {
    left: 0;
    right: 0;
    bottom: 0;
-   background: rgba(255,255,255,0.8);
+   background: rgba(249, 249, 249, 0.92);
    z-index: 9999;
    align-items: center;
    justify-content: center;
@@ -395,7 +395,7 @@ h3 {
    color: #cc0033;
    text-align: center;
    padding: 20px;
-   background-color: #fff;
+   background-color: var(--gray-100);
    border-radius: 4px;
    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
    margin: 20px 0;
@@ -404,7 +404,7 @@ h3 {
 .no-results {
    text-align: center;
    padding: 40px;
-   background: white;
+   background: var(--gray-100);
    border-radius: var(--radius-md);
    color: var(--gray-600);
    font-size: 1.1rem;

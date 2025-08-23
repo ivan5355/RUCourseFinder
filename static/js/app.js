@@ -41,7 +41,6 @@ function clearSearch() {
 
 function search() {
     const searchTerm = $('#search-bar').val();
-    const $loadingElement = $('.loading');
     const $resultsContainer = $('#search-results');
 
     if (!searchTerm.trim()) {
@@ -63,8 +62,7 @@ function search() {
     }
 
     // No valid cache, make API call
-    $loadingElement.css('display', 'flex');
-    $resultsContainer.empty();
+    $resultsContainer.html('<div class="inline-loading"><div class="spinner"></div></div>');
 
     let endpoint;
     switch(currentSearchType) {
@@ -120,9 +118,7 @@ function search() {
         console.error('Error:', error);
             $resultsContainer.html('<p class="error-message">An error occurred while searching. Please try again.</p>');
         },
-        complete: function() {
-            $loadingElement.hide();
-        }
+        complete: function() { }
     });
 }
 
