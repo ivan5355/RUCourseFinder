@@ -34,6 +34,12 @@ Additionally, the application provides a unique feature where students can view 
    MAPBOX_ACCESS_TOKEN=your_mapbox_token
    ```
 
+5. Get the most updated course data:
+   ```bash
+   python scripts/get_course_data.py
+   ```
+   This will fetch the latest course data from Rutgers and save it to the `data/` directory. Run this script periodically to keep your course data up to date.
+
 ## Dependencies
 
 The application requires the following main dependencies:
@@ -56,17 +62,20 @@ All dependencies are listed in `requirements.txt` and will be installed automati
 
 1. Make sure you're in the project directory and your virtual environment is activated
 
-2. Start the application:
+2. (Optional) Update course data to the latest semester:
+   ```bash
+   python scripts/get_course_data.py
+   ```
+   Run this whenever you want to fetch the most recent course offerings.
+
+3. Start the application:
    ```bash
    python app.py
    ```
 
-3. Open your web browser and navigate to:
-   ```
-   http://localhost:5005
-   ```
+4. Open the app in web broswer
 
-4. Allow location access when prompted to enable distance calculation features
+5. Allow location access when prompted to enable distance calculation features
 
 ## Key Features:
 
