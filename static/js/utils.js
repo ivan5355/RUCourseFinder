@@ -80,19 +80,20 @@ function showError(error) {
     let message = '';
     switch(error.code) {
         case error.PERMISSION_DENIED:
-            message = "User denied the request for Geolocation. Please enable location access in browser settings to use search features.";
+            message = "Location access denied. You can still search for courses, but distance information for community colleges will not be available.";
             break;
         case error.POSITION_UNAVAILABLE:
-            message = "Location information is unavailable.";
+            message = "Location information is unavailable. Distance information for community colleges will not be shown.";
             break;
         case error.TIMEOUT:
-            message = "The request to get user location timed out.";
+            message = "Location request timed out. Distance information for community colleges will not be shown.";
             break;
         case error.UNKNOWN_ERROR:
-            message = "An unknown error occurred while getting location.";
+            message = "An error occurred while getting location. Distance information for community colleges will not be shown.";
             break;
     }
-    $('#search-results').html(`<p class="error-message">${message}</p>`);
+    console.log(`Location error: ${message}`);
+    
 }
 
 

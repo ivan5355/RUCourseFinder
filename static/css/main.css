@@ -295,9 +295,32 @@ h3 {
 }
 
 .equivalencies {
-   margin-top: 6px;
-   padding-top: 6px;
-   border-top: 1px solid var(--gray-200);
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--gray-200);
+}
+
+.equivalencies.no-distance {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+}
+
+.equivalencies.no-distance .section-title,
+.equivalencies.no-distance .distance-note {
+    grid-column: 1 / -1;
+}
+
+.equivalencies.no-distance .equivalency-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.equivalencies.no-distance .distance-note {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    margin: 0;
 }
 
 .equivalency-item {

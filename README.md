@@ -1,9 +1,8 @@
 <img width="1489" alt="Screenshot 2025-06-03 at 7 50 11 PM" src="https://github.com/user-attachments/assets/b4e4c4b4-99d2-49c0-9a07-edee9baa46ac" />
 <img width="1468" alt="Screenshot 2025-06-03 at 7 49 32 PM" src="https://github.com/user-attachments/assets/b3312975-5ae1-4fc0-86eb-a48cabaf37f0" />
 
-## RU Course Finder
-
-The RU Course Finder application enhances the existing course search functionality at Rutgers University by allowing users to search for courses based on course title, professor, or course code. Unlike the current search, which relies on exact keyword matches, my application incorporates semantic search. This feature compares vector embeddings of the user's search query with embeddings of actual course titles, improving the accuracy and relevance of search results—especially when searching by course title. This makes it easier for users to find courses even when their search terms don't exactly match the course title.
+## ruequialent
+- The RUequivalent application enhances the existing course search functionality at Rutgers University by allowing users to search for courses based on course title, professor, or course code.
 
 Additionally, the application provides a unique feature where students can view equivalent courses at local community colleges, along with the distance to these colleges and the name of the equivalent course.
 
@@ -62,7 +61,7 @@ All dependencies are listed in `requirements.txt` and will be installed automati
 
 1. Make sure you're in the project directory and your virtual environment is activated
 
-2. (Optional) Update course data to the latest semester:
+2. Update course data to the latest semester if you haven't done so already:
    ```bash
    python scripts/get_course_data.py
    ```
@@ -73,9 +72,12 @@ All dependencies are listed in `requirements.txt` and will be installed automati
    python app.py
    ```
 
-4. Open the app in web broswer
+4. Open the app in web browser at:
+   ```
+   http://localhost:5005
+   ```
 
-5. Allow location access when prompted to enable distance calculation features
+5. (Optional) Allow location access when prompted to enable distance-based sorting for community college equivalencies. The app works without location access, but distances won't be shown.
 
 ## Key Features:
 
@@ -83,9 +85,9 @@ All dependencies are listed in `requirements.txt` and will be installed automati
 
 **Semantic Search**: By utilizing vector embeddings powered by Google's text-embedding-004 model, the application ensures more accurate and flexible search results, even when the exact course title doesn't match the user's query. This is particularly useful for title-based searches, accommodating variations in phrasing.
 
-**Course Equivalency**: For each Rutgers course, the application offers a list of equivalent courses at nearby community colleges.
+**Course Equivalency**: For each Rutgers course, the application displays a list of equivalent courses at community colleges across New Jersey.
 
-**Distance Calculation**: Displays the distance from the user's location to community colleges offering equivalent courses, making it easier to evaluate nearby options.
+**Distance Calculation**: When location access is granted, displays the distance from the user's location to community colleges offering equivalent courses, sorted by proximity. Community colleges are still shown even without location access.
 
 ## Technical Architecture
 

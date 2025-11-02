@@ -323,54 +323,68 @@ class course_search:
     # get top 5 course equivalencies by distance
     async def get_top_5_course_equivalencies_by_distance(self, course_code, college_distances):
         """
-        Find top 5 course equivalencies sorted by distance from user's location.
+        Find course equivalencies sorted by distance when available.
+        If no location is available, surface all unique equivalencies without distance sorting.
 
         Args:
             course_code (str): Course code to find equivalencies for
-            college_distances (dict): Precomputed distances to community colleges.
+            college_distances (dict): Precomputed distances to community colleges. Can be None/empty if no location.
 
         Returns:
-            list: Top 5 course equivalencies with distance information
+            list: Course equivalencies with distance information (or without if location unavailable)
         """
-        if not college_distances:
-            # Without distance info we cannot rank; return empty list
-            return []
-
         equivalencies = pd.read_csv('data/community_to_college.csv')
         equivalencies = equivalencies[equivalencies['equivalency'] == course_code]
 
         if equivalencies.empty:
             return []
 
-        # Use precomputed distances to save computation time
-        distances = []
-        for college in equivalencies['community_college']:
-            dist = college_distances.get(college)
-            # Replace infinite or missing distances with None so they serialize to null in JSON
-            if dist is None or (isinstance(dist, (int, float)) and math.isinf(dist)):
-                distances.append(None)
-            else:
-                distances.append(dist)
+        # If we have distance information, use it for sorting
+        if college_distances:
+            # Use precomputed distances to save computation time
+            distances = []
+            for college in equivalencies['community_college']:
+                dist = college_distances.get(college)
+                # Replace infinite or missing distances with None so they serialize to null in JSON
+                if dist is None or (isinstance(dist, (int, float)) and math.isinf(dist)):
+                    distances.append(None)
+                else:
+                    distances.append(dist)
     
-        equivalencies['Distance'] = distances
-        
-        unique_colleges = set()
-        top_5 = []
-        
-        #Get top 5 unique colleges by distance
-        for _, row in equivalencies.sort_values('Distance').iterrows():
-            college = row['community_college']
-            if college not in unique_colleges:
-                unique_colleges.add(college)
+            equivalencies['Distance'] = distances
+            
+            unique_colleges = set()
+            top_5 = []
+            
+            #Get top 5 unique colleges by distance
+            for _, row in equivalencies.sort_values('Distance').iterrows():
+                college = row['community_college']
+                if college not in unique_colleges:
+                    unique_colleges.add(college)
 
-                row_data = row.to_dict()
-                # Convert pandas NaN to None for JSON safety
-                if pd.isna(row_data.get('Distance')):
+                    row_data = row.to_dict()
+                    # Convert pandas NaN to None for JSON safety
+                    if pd.isna(row_data.get('Distance')):
+                        row_data['Distance'] = None
+
+                    top_5.append(row_data)
+                    if len(top_5) == 5:
+                        break
+        else:
+            # No location available - return all unique equivalencies without distance sorting
+            equivalencies['Distance'] = None
+            unique_colleges = set()
+            all_equivalencies = []
+
+            for _, row in equivalencies.sort_values('community_college').iterrows():
+                college = row['community_college']
+                if college not in unique_colleges:
+                    unique_colleges.add(college)
+                    row_data = row.to_dict()
                     row_data['Distance'] = None
+                    all_equivalencies.append(row_data)
 
-                top_5.append(row_data)
-                if len(top_5) == 5:
-                    break
+            return all_equivalencies
 
         return top_5
 
@@ -538,10 +552,8 @@ class course_search:
 
             course_code = course_string.replace(':', '')
 
-            # Calculate equivalencies only if distance info is available
-            course_equivalencies = []
-            if college_distances:
-                course_equivalencies = await self.get_top_5_course_equivalencies_by_distance(course_code, college_distances)
+            # Get equivalencies (with or without distance info)
+            course_equivalencies = await self.get_top_5_course_equivalencies_by_distance(course_code, college_distances)
 
             course_data = {
                 'title': course_title,

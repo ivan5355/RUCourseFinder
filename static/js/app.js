@@ -23,12 +23,11 @@ $(document).ready(function() {
         event.preventDefault();
         clearSearch();
 
-        // If no cached location, request it now (user gesture) and halt search
+        // Try to get location but don't block search if not available
         const cachedLocation = getCachedLocation();
         if (!cachedLocation) {
-            $('#search-results').html('<p class="error-message">Please allow location access to enable distance-based results. A browser prompt should appear now.</p>');
+            // Request location but continue with search anyway
             getLocation();
-            return;
         }
 
         search();
@@ -89,12 +88,7 @@ function search() {
         success: function(data) {
         if (data.status === 'error') {
                 const $resultsContainer = $('#search-results');
-                if (data.message === 'Location not set') {
-                    $resultsContainer.html('<p class="error-message">Location is required for searches. Please allow location access in the browser prompt.</p>');
-                    getLocation();
-                } else {
-                    $resultsContainer.html(`<p class="error-message">${data.message}</p>`);
-                }
+                $resultsContainer.html(`<p class="error-message">${data.message}</p>`);
             return;
         }
         
@@ -194,26 +188,46 @@ function displayCourses(courses) {
 
             // Equivalencies Section
             if (course.equivalencies && course.equivalencies.length > 0) {
+                const hasDistance = course.equivalencies.some(equiv => equiv.Distance !== null && equiv.Distance !== undefined);
                 const $equivSection = $('<div>').addClass('equivalencies');
+                if (!hasDistance) {
+                    $equivSection.addClass('no-distance');
+                }
+
                 const $equivTitle = $('<div>').addClass('section-title').text('Community College Equivalencies');
                 $equivSection.append($equivTitle);
-                
+
+                if (!hasDistance) {
+                    const $distanceNote = $('<p>').addClass('distance-note').text('Enable location access to see distances. All matching community colleges are shown below.');
+                    $equivSection.append($distanceNote);
+                }
+
                 course.equivalencies.forEach(equiv => {
                     const $equivItem = $('<div>').addClass('equivalency-item');
                     
                     const $collegeName = $('<span>')
                         .addClass('college-name')
                         .text(equiv.community_college);
-                    
-                    const $distance = $('<span>')
-                        .addClass('distance')
-                        .text(`${equiv.Distance} miles`);
-                    
+
                     const $equivCode = $('<span>')
                         .addClass('course-code-equiv')
                         .text(`${equiv.code} ${equiv.name}`);
-                    
-                    $equivItem.append($collegeName, $distance, $equivCode);
+
+                    $equivItem.append($collegeName);
+
+                    // Only show distance if it's available (i.e., location allowed)
+                    if (hasDistance) {
+                        let distanceText = 'Distance unavailable';
+                        if (equiv.Distance !== null && equiv.Distance !== undefined) {
+                            distanceText = `${equiv.Distance} miles`;
+                        }
+                        const $distance = $('<span>')
+                            .addClass('distance')
+                            .text(distanceText);
+                        $equivItem.append($distance);
+                    }
+
+                    $equivItem.append($equivCode);
                     $equivSection.append($equivItem);
                 });
                 

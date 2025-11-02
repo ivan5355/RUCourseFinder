@@ -80,12 +80,10 @@ async def search_by_title(request: Request):
         # Input validation
         if not search_term:
             return {'status': 'error', 'message': 'Search term is required'}
-        
-        if not your_location:
-            return {'status': 'error', 'message': 'Location not set'}
 
         # Gets the top courses, along with their course info(title, course_string, instructors, prerequisites, equivalencies)
         # that most closely macthes the title the user search
+        # Pass college_distances (which may be None if location not set)
         results = await courses_controller.search_by_title(search_term, college_distances)
 
         if not results:
@@ -125,11 +123,9 @@ async def search_by_code(request: Request):
         
         if not search_term:
             return {'status': 'error', 'message': 'Course code is required'}
-        
-        if not your_location:
-            return {'status': 'error', 'message': 'Location not set'}
 
-        # returns all courses and their course info that ends with the 3 digits the user specifies 
+        # returns all courses and their course info that ends with the 3 digits the user specifies
+        # Pass college_distances (which may be None if location not set)
         results = await courses_controller.search_by_code(search_term, college_distances)
 
         if not results:
